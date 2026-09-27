@@ -1,0 +1,18 @@
+# Скачать готовую модель: python3 tools/download_model.py
+services:
+  ml:
+    environment:
+      MODEL_PATH: /models/model.joblib
+      ENCODER_PATH: /models/encoder.pt
+      MODEL_MANIFEST_PATH: ${MODEL_MANIFEST_PATH:-}
+      PROBABILITY_PATH: ${PROBABILITY_PATH-/models/probability.json}
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+    volumes:
+      - type: bind
+        source: ${MODEL_DIR:-./artifacts/model}
+        target: /models
+        read_only: true
+        bind:
+          create_host_path: false

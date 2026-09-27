@@ -1,0 +1,107 @@
+{
+  "checked_at": "2026-09-27T15:49:29.567803+00:00",
+  "python_tests": {
+    "passed": 653,
+    "failed": 0
+  },
+  "dashboard_checks": {
+    "passed": 37
+  },
+  "docker_start": {
+    "train": true,
+    "validate": true,
+    "trained_model": true,
+    "swagger": true,
+    "pydoc": true
+  },
+  "official_emulator": {
+    "handshake": true,
+    "ndtp_received": true,
+    "execution": "ml_http",
+    "method": "learned",
+    "context": "synthetic integration plan; initial delay +180 s"
+  },
+  "live_plan_csv_conversion": true,
+  "performance": {
+    "measured_at": "2026-09-27T15:49:29.567803+00:00",
+    "passed": true,
+    "environment": {
+      "host": "Apple Silicon, macOS; Colima",
+      "docker": {
+        "ServerVersion": "29.5.2",
+        "NCPU": 4,
+        "MemTotal": 6197440512,
+        "KernelVersion": "6.8.0-117-generic",
+        "Architecture": "aarch64",
+        "OSType": "linux",
+        "OperatingSystem": "Ubuntu 24.04.4 LTS"
+      }
+    },
+    "scenario": {
+      "vehicles": 40,
+      "plan_visits_per_vehicle": 400,
+      "rounds": 24,
+      "source": "synthetic NDTP, actual Docker stack"
+    },
+    "stream": {
+      "sent": 960,
+      "received": 960,
+      "nominal_messages_per_s": 40.0,
+      "wall_s": 24.556,
+      "e2e_p50_ms": 975.25,
+      "e2e_p95_ms": 1567.42,
+      "e2e_max_ms": 1596.39,
+      "p95_budget_ms": 2000,
+      "p95_budget_met": true,
+      "peak_pending_rounds": 2,
+      "pending_at_end": 0,
+      "http_ml_p95_ms": 286.72,
+      "pipeline_p95_ms": 301.85
+    },
+    "checks": [
+      {
+        "name": "Docker image/source parity и прогретый HTTP learned",
+        "passed": true,
+        "vehicles": 40,
+        "visits_per_vehicle": 400
+      },
+      {
+        "name": "NDTP → backend → ML HTTP → nginx API",
+        "passed": true,
+        "sent": 960,
+        "received": 960,
+        "e2e_p95_ms": 1567.42,
+        "pending_at_end": 0
+      },
+      {
+        "name": "Дубликат и повреждённый CRC",
+        "passed": true,
+        "duplicate_not_counted": true
+      },
+      {
+        "name": "Повторный NDTP handshake",
+        "passed": true,
+        "recovery_s": 1.523
+      },
+      {
+        "name": "Остановлен настоящий ML-контейнер",
+        "passed": true,
+        "fallback_s": 0.605
+      },
+      {
+        "name": "Тот же ML-контейнер запущен снова",
+        "passed": true,
+        "recovery_s": 2.37
+      }
+    ],
+    "limitations": [
+      "Искусственный план и подтверждения arrival; качество ML и вероятность здесь не оцениваются.",
+      "Настоящий Linux Docker-стек, хостовый TCP producer, nginx UI proxy; отрисовка браузером не измеряется.",
+      "Опрос API каждые 100 мс; end-to-end включает ожидание цикла backend и получение JSON.",
+      "Короткий ограниченный поток, не предел пропускной способности и не длительный soak test.",
+      "Pending — неподтверждённые раунды, не размер очереди ядра TCP; раунды могут объединяться одним прогнозом."
+    ],
+    "tool": "tools/check_docker_load.py",
+    "tool_sha256": "ab04f454fe07a716d01360c1676d8fa15c1648e6b5f949abe4ffe175ee208954"
+  }
+}

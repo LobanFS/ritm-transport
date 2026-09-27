@@ -1,0 +1,23 @@
+# Add this overlay and run with: docker compose ... up --scale ml=3
+services:
+  ml:
+    ports: !reset []
+  ml-gateway:
+    image: nginx:1.28-alpine
+    volumes:
+      - ./config/ml-gateway.conf:/etc/nginx/nginx.conf:ro
+    ports: ['127.0.0.1:8001:8001']
+    depends_on:
+      ml: {condition: service_healthy}
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:8001/health']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+  backend:
+    environment:
+      ML_URL: http://ml-gateway:8001
+    depends_on:
+      ml-gateway: {condition: service_healthy}

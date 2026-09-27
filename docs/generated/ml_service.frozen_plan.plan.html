@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: ml_service.frozen_plan.plan</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="ml_service.html" class="white">ml_service</a>.<a href="ml_service.frozen_plan.html" class="white">frozen_plan</a>.plan</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="https://github.com/LobanFS/ritm-transport/blob/main/ml_service/frozen_plan/plan.py">ml_service/frozen_plan/plan.py</a></td></tr></table>
+    <p><span class="code">Exact&nbsp;selected&nbsp;plan-context&nbsp;r03&nbsp;recipe,&nbsp;with&nbsp;audited&nbsp;identity&nbsp;fallback.</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn">numpy<br>
+</td><td class="multicolumn">pandas<br>
+</td><td class="multicolumn"></td><td class="multicolumn"></td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-build_plan_features"><strong>build_plan_features</strong></a>(points: pandas.core.frame.DataFrame, plan: pandas.core.frame.DataFrame) -&gt; pandas.core.frame.DataFrame</dt></dl>
+ <dl><dt><a name="-fallback_audit"><strong>fallback_audit</strong></a>(features: pandas.core.frame.DataFrame) -&gt; dict</dt></dl>
+ <dl><dt><a name="-load_plan"><strong>load_plan</strong></a>(dataset: pathlib.Path, split: str) -&gt; pandas.core.frame.DataFrame</dt></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>PARAMETERS</strong> = {'l2_regularization': 30.0, 'learning_rate': 0.035, 'max_iter': 160, 'max_leaf_nodes': 12, 'min_samples_leaf': 45, 'random_state': 12012}<br>
+<strong>PLAN_COLUMNS</strong> = ('tt_action_item_id', 'time_begin', 'order_date', 'manual_fill', 'tr_id', 'geom', 'building_address')<br>
+<strong>PLAN_FEATURES</strong> = ('cur_dev_s', 'horizon_min', 'cur_x_horizon', 'cur_abs_s', 'cur_sign', 'target_rel_pos', 'state_rel_pos', 'stops_ahead', 'stops_ahead_log', 'plan_interval_s', 'route_len', 'plan_manual_target', 'plan_manual_rate')</td></tr></table>
+</body></html>

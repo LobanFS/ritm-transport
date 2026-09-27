@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: ml_service.learned</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="ml_service.html" class="white">ml_service</a>.learned</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="https://github.com/LobanFS/ritm-transport/blob/main/ml_service/learned.py">ml_service/learned.py</a></td></tr></table>
+    <p><span class="code">Runtime&nbsp;адаптер&nbsp;frozen&nbsp;Swiss&nbsp;Transformer&nbsp;prior&nbsp;+&nbsp;Moscow&nbsp;HGBR.</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn">hashlib<br>
+</td><td class="multicolumn">json<br>
+</td><td class="multicolumn">os<br>
+</td><td class="multicolumn"></td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor index-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Classes</strong></td></tr>
+    
+<tr><td class="decor index-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl>
+<dt class="heading-text">builtins.object
+</dt><dd>
+<dl>
+<dt class="heading-text"><a href="ml_service.learned.html#LearnedModel">LearnedModel</a>
+</dt></dl>
+</dd>
+</dl>
+ <p>
+<table class="section">
+<tr class="decor title-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><a name="LearnedModel">class <strong>LearnedModel</strong></a>(builtins.object)</td></tr>
+    
+<tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#LearnedModel">LearnedModel</a>(path:&nbsp;'Path',&nbsp;encoder_path:&nbsp;'Path&nbsp;|&nbsp;None'&nbsp;=&nbsp;None,&nbsp;manifest_path:&nbsp;'Path&nbsp;|&nbsp;None'&nbsp;=&nbsp;None)<br>
+&nbsp;<br>
+Read-only&nbsp;гибрид;&nbsp;оба&nbsp;артефакта&nbsp;проверяются&nbsp;до&nbsp;десериализации.<br>&nbsp;</span></td></tr>
+<tr><td>&nbsp;</td>
+<td class="singlecolumn">Methods defined here:<br>
+<dl><dt><a name="LearnedModel-__init__"><strong>__init__</strong></a>(self, path: 'Path', encoder_path: 'Path | None' = None, manifest_path: 'Path | None' = None)</dt><dd><span class="code">Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</span></dd></dl>
+
+<dl><dt><a name="LearnedModel-features"><strong>features</strong></a>(self, request: 'PredictionRequest')</dt></dl>
+
+<dl><dt><a name="LearnedModel-predict"><strong>predict</strong></a>(self, request: 'PredictionRequest') -&gt; 'Prediction'</dt></dl>
+
+<dl><dt><a name="LearnedModel-predict_batch"><strong>predict_batch</strong></a>(self, requests: 'list[PredictionRequest]') -&gt; 'list[Prediction]'</dt></dl>
+
+<dl><dt><a name="LearnedModel-response"><strong>response</strong></a>(self, request: 'PredictionRequest', value: 'float', explanation) -&gt; 'Prediction'</dt></dl>
+
+<hr>
+Static methods defined here:<br>
+<dl><dt><a name="LearnedModel-history_counterfactual_inputs"><strong>history_counterfactual_inputs</strong></a>(requests, plan_matrix)</dt><dd><span class="code">Пересобрать&nbsp;sequence&nbsp;после&nbsp;удаления&nbsp;каждого&nbsp;прошлого&nbsp;наблюдения.</span></dd></dl>
+
+<dl><dt><a name="LearnedModel-input_frames"><strong>input_frames</strong></a>(request: 'PredictionRequest')</dt></dl>
+
+<dl><dt><a name="LearnedModel-sequence_inputs"><strong>sequence_inputs</strong></a>(requests, plan_matrix)</dt></dl>
+
+<dl><dt><a name="LearnedModel-transformer_analyses"><strong>transformer_analyses</strong></a>(requests, prior, current_only_prior, counterfactual_prior, metadata)</dt><dd><span class="code">Собрать&nbsp;человекочитаемый&nbsp;анализ&nbsp;Transformer&nbsp;из&nbsp;честных&nbsp;counterfactuals.</span></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><span class="code">dictionary&nbsp;for&nbsp;instance&nbsp;variables</span></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><span class="code">list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object</span></dd>
+</dl>
+</td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-Lock"><strong>Lock</strong></a> = allocate_lock(...)</dt><dd><span class="code">allocate_lock()&nbsp;-&gt;&nbsp;lock&nbsp;object<br>
+(allocate()&nbsp;is&nbsp;an&nbsp;obsolete&nbsp;synonym)<br>
+&nbsp;<br>
+Create&nbsp;a&nbsp;new&nbsp;lock&nbsp;object.&nbsp;See&nbsp;help(type(threading.<a href="#-Lock">Lock</a>()))&nbsp;for<br>
+information&nbsp;about&nbsp;locks.</span></dd></dl>
+ <dl><dt><a name="-fallback"><strong>fallback</strong></a>(request: 'PredictionRequest', reason: 'str') -&gt; 'Prediction'</dt></dl>
+ <dl><dt><a name="-runtime"><strong>runtime</strong></a>() -&gt; 'tuple[LearnedModel | None, str | None]'</dt></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>ENCODER_SHA256</strong> = '729174c663a6fe4c1a1f657543f16538b9a8ff7b7d33cdff1c9c4f96f4303a73'<br>
+<strong>MODEL_SHA256</strong> = 'bfed9d9608fd707a634605900ac75d81e863309c29105c9b5183491965289905'<br>
+<strong>MODEL_VERSION</strong> = 'swiss-transformer-hgbr-prior-v1'<br>
+<strong>PACKAGES</strong> = ('numpy', 'pandas', 'scipy', 'scikit-learn', 'joblib', 'threadpoolctl', 'torch')</td></tr></table>
+</body></html>

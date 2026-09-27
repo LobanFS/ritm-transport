@@ -1,0 +1,9 @@
+# Optional durable journal. It is disabled unless this overlay is selected.
+services:
+  backend:
+    environment:
+      LEARNING_STORE_PATH: /var/lib/mos-transport/learning.sqlite3
+    volumes:
+      - learning-data:/var/lib/mos-transport
+volumes:
+  learning-data:

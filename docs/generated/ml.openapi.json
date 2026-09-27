@@ -1,0 +1,911 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Предиктор задержки: ML-модуль",
+    "description": "Frozen Swiss Transformer prior + Moscow HistGradientBoosting. При отсутствии модели/плана доступен явно обозначенный persistence fallback. Контракт, происхождение модели и ограничения: /model.",
+    "version": "2.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Указать фактически загруженную модель; ошибка загрузки не скрывается.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ]
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/model": {
+      "get": {
+        "summary": "Model Card",
+        "description": "Описать контракт, ограничения и правила интерпретации результата baseline.",
+        "operationId": "model_card_model_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Model Card Model Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predict": {
+      "post": {
+        "summary": "Predict",
+        "description": "Исполнить frozen модель либо явно обозначить причину резервного прогноза.",
+        "operationId": "predict_predict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PredictionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Prediction"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predict/batch": {
+      "post": {
+        "summary": "Predict Batch",
+        "description": "Обработать не более 128 запросов, сохранив их порядок; ошибка отклоняет весь пакет.",
+        "operationId": "predict_batch_predict_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/PredictionRequest"
+                },
+                "type": "array",
+                "maxItems": 128,
+                "title": "Requests"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Prediction"
+                  },
+                  "type": "array",
+                  "title": "Response Predict Batch Predict Batch Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DelayObservation": {
+        "properties": {
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observed At"
+          },
+          "delay_s": {
+            "type": "number",
+            "title": "Delay S"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "observed_at",
+          "delay_s"
+        ],
+        "title": "DelayObservation",
+        "description": "Наблюдение известного тогда отклонения, строго предшествующее issued_at."
+      },
+      "Features": {
+        "properties": {
+          "telemetry_age_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telemetry Age S"
+          },
+          "valid_points_5m": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Valid Points 5M",
+            "default": 0
+          },
+          "speed_mean_5m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 150.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed Mean 5M"
+          },
+          "stopped_share_5m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stopped Share 5M"
+          },
+          "distance_to_target_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance To Target M"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Features"
+      },
+      "ForecastExplanation": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "const": "exact_grouped_shapley_reference_v1",
+            "title": "Method"
+          },
+          "reference": {
+            "type": "string",
+            "title": "Reference"
+          },
+          "reference_prediction_s": {
+            "type": "number",
+            "title": "Reference Prediction S"
+          },
+          "current_delay_s": {
+            "type": "number",
+            "title": "Current Delay S"
+          },
+          "prediction_s": {
+            "type": "number",
+            "title": "Prediction S"
+          },
+          "model_adjustment_s": {
+            "type": "number",
+            "title": "Model Adjustment S"
+          },
+          "reconstructed_prediction_s": {
+            "type": "number",
+            "title": "Reconstructed Prediction S"
+          },
+          "reconstruction_error_s": {
+            "type": "number",
+            "title": "Reconstruction Error S"
+          },
+          "factors": {
+            "items": {
+              "$ref": "#/components/schemas/ForecastFactor"
+            },
+            "type": "array",
+            "title": "Factors"
+          },
+          "history_points": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "History Points",
+            "default": 1
+          },
+          "history_span_s": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "History Span S",
+            "default": 0
+          },
+          "neural_prior_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Neural Prior S"
+          },
+          "current_only_neural_prior_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Only Neural Prior S"
+          },
+          "history_effect_on_neural_prior_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History Effect On Neural Prior S"
+          },
+          "transformer_analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TransformerAnalysis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "interpretation": {
+            "type": "string",
+            "title": "Interpretation",
+            "default": "Вклады описывают чувствительность модели относительно опорного train-примера и не являются доказанными причинами задержки."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "method",
+          "reference",
+          "reference_prediction_s",
+          "current_delay_s",
+          "prediction_s",
+          "model_adjustment_s",
+          "reconstructed_prediction_s",
+          "reconstruction_error_s",
+          "factors"
+        ],
+        "title": "ForecastExplanation",
+        "description": "Проверяемое аддитивное разложение результата регрессии."
+      },
+      "ForecastFactor": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "current_state",
+              "forecast_horizon",
+              "route_position",
+              "remaining_path",
+              "plan_context",
+              "sequence_history"
+            ],
+            "title": "Code"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "effect_s": {
+            "type": "number",
+            "title": "Effect S"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "increases",
+              "decreases",
+              "neutral"
+            ],
+            "title": "Direction"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "title",
+          "effect_s",
+          "direction"
+        ],
+        "title": "ForecastFactor",
+        "description": "Локальный вклад группы признаков в численный прогноз.\n\nВклад объясняет поведение модели относительно зафиксированного опорного\nпримера. Он не устанавливает физическую причину задержки."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ModelPlanContext": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Version"
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Timezone"
+          },
+          "complete": {
+            "type": "boolean",
+            "title": "Complete"
+          },
+          "stops": {
+            "items": {
+              "$ref": "#/components/schemas/StopTarget"
+            },
+            "type": "array",
+            "maxItems": 20000,
+            "minItems": 1,
+            "title": "Stops"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version",
+          "timezone",
+          "complete",
+          "stops"
+        ],
+        "title": "ModelPlanContext",
+        "description": "Полный разрешённый план одного ТС для frozen plan-context builder.\n\nВсе строки — план, включая будущие плановые посещения, без фактов прибытия.\ncomplete подтверждает полноту исходного плана, а не наличие GPS для всех остановок."
+      },
+      "Prediction": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "tr_id": {
+            "type": "integer",
+            "title": "Tr Id"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Issued At"
+          },
+          "target": {
+            "$ref": "#/components/schemas/StopTarget"
+          },
+          "predicted_delay_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Delay S"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "persistence",
+              "fallback",
+              "unavailable",
+              "learned"
+            ],
+            "title": "Method"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "green",
+              "amber",
+              "red",
+              "unknown"
+            ],
+            "title": "Risk"
+          },
+          "probability_late": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability Late"
+          },
+          "probability_status": {
+            "type": "string",
+            "enum": [
+              "validated",
+              "transferred",
+              "unavailable"
+            ],
+            "title": "Probability Status",
+            "description": "validated — внутри проверенной области; transferred — приближённый перенос на смешанный train; unavailable — оценки нет",
+            "default": "unavailable"
+          },
+          "probability_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability Note"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "forecast_explanation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ForecastExplanation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "tr_id",
+          "issued_at",
+          "target",
+          "predicted_delay_s",
+          "model_version",
+          "method",
+          "risk",
+          "reasons"
+        ],
+        "title": "Prediction"
+      },
+      "PredictionRequest": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Request Id"
+          },
+          "tr_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Tr Id"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Issued At"
+          },
+          "target": {
+            "$ref": "#/components/schemas/StopTarget"
+          },
+          "current_delay_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Delay S"
+          },
+          "current_delay_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "arrival",
+                  "demo_arrival",
+                  "generator_arrival",
+                  "gps_estimate",
+                  "door_estimate",
+                  "external_hint",
+                  "csv_snapshot",
+                  "synthetic_hint"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Delay Source"
+          },
+          "current_delay_detector_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Delay Detector Version"
+          },
+          "current_delay_detector_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Delay Detector Sha256"
+          },
+          "telemetry_domain": {
+            "type": "string",
+            "enum": [
+              "historical_real",
+              "historical_mixed",
+              "live_unverified",
+              "synthetic",
+              "unknown"
+            ],
+            "title": "Telemetry Domain",
+            "description": "Происхождение входов, выставленное backend; область проверки вероятности не переносится на синтетику автоматически",
+            "default": "unknown"
+          },
+          "features": {
+            "$ref": "#/components/schemas/Features"
+          },
+          "plan_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelPlanContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "delay_history": {
+            "items": {
+              "$ref": "#/components/schemas/DelayObservation"
+            },
+            "type": "array",
+            "maxItems": 11,
+            "title": "Delay History",
+            "description": "До 11 причинно доступных наблюдений перед issued_at; текущий cur_dev_s добавляет ML-модуль."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "tr_id",
+          "issued_at",
+          "target"
+        ],
+        "title": "PredictionRequest"
+      },
+      "StopTarget": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "scheduled_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled At"
+          },
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon"
+          },
+          "manual_fill": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Fill",
+            "description": "Плановое поле; null означает неизвестное, а не false"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "scheduled_at",
+          "lat",
+          "lon"
+        ],
+        "title": "StopTarget"
+      },
+      "TransformerAnalysis": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "const": "leave_one_history_observation_out_v1",
+            "title": "Method"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "delay_trend_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delay Trend S"
+          },
+          "recent_change_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Change S"
+          },
+          "step_volatility_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Volatility S"
+          },
+          "influential_history": {
+            "items": {
+              "$ref": "#/components/schemas/TransformerHistoryImpact"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Influential History"
+          },
+          "interpretation": {
+            "type": "string",
+            "title": "Interpretation",
+            "default": "Это чувствительность Transformer к истории cur_dev_s, а не доказательство пробки, ДТП, посадки или другой физической причины."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "method",
+          "summary"
+        ],
+        "title": "TransformerAnalysis",
+        "description": "Анализ временного сигнала Transformer, без заявления о физической причине."
+      },
+      "TransformerHistoryImpact": {
+        "properties": {
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observed At"
+          },
+          "delay_s": {
+            "type": "number",
+            "title": "Delay S"
+          },
+          "age_s": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Age S"
+          },
+          "prior_effect_s": {
+            "type": "number",
+            "title": "Prior Effect S"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "increases",
+              "decreases",
+              "neutral"
+            ],
+            "title": "Direction"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "observed_at",
+          "delay_s",
+          "age_s",
+          "prior_effect_s",
+          "direction"
+        ],
+        "title": "TransformerHistoryImpact",
+        "description": "Counterfactual-вклад одного прошлого наблюдения во внутренний prior."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

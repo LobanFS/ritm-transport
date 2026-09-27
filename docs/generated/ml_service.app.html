@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: ml_service.app</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="ml_service.html" class="white">ml_service</a>.app</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="https://github.com/LobanFS/ritm-transport/blob/main/ml_service/app.py">ml_service/app.py</a></td></tr></table>
+    <p><span class="code">HTTP-инференс&nbsp;frozen&nbsp;Transformer&nbsp;+&nbsp;HGBR&nbsp;с&nbsp;явным&nbsp;persistence&nbsp;fallback.<br>
+&nbsp;<br>
+Запуск&nbsp;из&nbsp;каталога&nbsp;``filipp``:&nbsp;``uvicorn&nbsp;ml_service.app:app&nbsp;--port&nbsp;8001``.<br>
+MODEL_PATH&nbsp;активирует&nbsp;проверенный&nbsp;team&nbsp;artifact;&nbsp;без&nbsp;него&nbsp;доступен&nbsp;baseline.</span></p>
+<p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-health"><strong>health</strong></a>() -&gt; dict[str, str | bool]</dt><dd><span class="code">Указать&nbsp;фактически&nbsp;загруженную&nbsp;модель;&nbsp;ошибка&nbsp;загрузки&nbsp;не&nbsp;скрывается.</span></dd></dl>
+ <dl><dt><a name="-lifespan"><strong>lifespan</strong></a>(application: fastapi.applications.FastAPI)</dt></dl>
+ <dl><dt><a name="-model_card"><strong>model_card</strong></a>() -&gt; dict[str, typing.Any]</dt><dd><span class="code">Описать&nbsp;контракт,&nbsp;ограничения&nbsp;и&nbsp;правила&nbsp;интерпретации&nbsp;результата&nbsp;baseline.</span></dd></dl>
+ <dl><dt><a name="-predict"><strong>predict</strong></a>(request: common.contracts.PredictionRequest) -&gt; common.contracts.Prediction</dt><dd><span class="code">Исполнить&nbsp;frozen&nbsp;модель&nbsp;либо&nbsp;явно&nbsp;обозначить&nbsp;причину&nbsp;резервного&nbsp;прогноза.</span></dd></dl>
+ <dl><dt><a name="-predict_batch"><strong>predict_batch</strong></a>(requests: Annotated[list[common.contracts.PredictionRequest], Body(PydanticUndefined)]) -&gt; list[common.contracts.Prediction]</dt><dd><span class="code">Обработать&nbsp;не&nbsp;более&nbsp;128&nbsp;запросов,&nbsp;сохранив&nbsp;их&nbsp;порядок;&nbsp;ошибка&nbsp;отклоняет&nbsp;весь&nbsp;пакет.</span></dd></dl>
+ <dl><dt>async <a name="-validation_error"><strong>validation_error</strong></a>(request: starlette.requests.Request, exc: fastapi.exceptions.RequestValidationError) -&gt; starlette.responses.JSONResponse</dt><dd><span class="code">Вернуть&nbsp;422&nbsp;даже&nbsp;при&nbsp;NaN/Infinity&nbsp;во&nbsp;входе,&nbsp;не&nbsp;допуская&nbsp;ошибки&nbsp;сериализации.</span></dd></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>MAX_BATCH_SIZE</strong> = 128<br>
+<strong>MODEL_VERSION</strong> = 'persistence-v1'<br>
+<strong>app</strong> = &lt;fastapi.applications.FastAPI object&gt;</td></tr></table>
+</body></html>

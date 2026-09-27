@@ -1,0 +1,25 @@
+{
+  "description": "Точная копия frozen builder и runtime модели сокомандника; обучение не вызывается.",
+  "files": {
+    "__init__.py": {
+      "source": "alexchist/task1_ml/__init__.py",
+      "sha256": "5ea1f1d2698d02b77aef5888e8224d202d25ec1e4191ec1b072ccb43911f37d6"
+    },
+    "contracts.py": {
+      "source": "alexchist/task1_ml/contracts.py",
+      "sha256": "727bd91635a4d1e5d166eff1bd55e88f5f96dc4208c25e8e08beea27cb838c7e"
+    },
+    "features.py": {
+      "source": "alexchist/task1_ml/features.py",
+      "sha256": "3c45b6513ad94ec8d4801e6fa31f6653865b3a8a60b82e40b0db05500bfae89a"
+    },
+    "plan.py": {
+      "source": "alexchist/task1_ml/plan.py",
+      "sha256": "35e75fe41020ebe5b62971e18c627e322c4ab97605ca9ef9a12b9634fc438e71"
+    },
+    "model.py": {
+      "source": "alexchist/task1_ml/model.py",
+      "sha256": "12121eb5e76bcbc0bc2294f29b9ab240e0d3105130cea5d259671e334e0acf14"
+    }
+  }
+}

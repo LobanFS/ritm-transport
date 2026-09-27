@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: backend.learning_store</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="backend.html" class="white">backend</a>.learning_store</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="https://github.com/LobanFS/ritm-transport/blob/main/backend/learning_store.py">backend/learning_store.py</a></td></tr></table>
+    <p><span class="code">Durable,&nbsp;optional&nbsp;collection&nbsp;of&nbsp;causally&nbsp;valid&nbsp;production&nbsp;examples.</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn">hashlib<br>
+</td><td class="multicolumn">json<br>
+</td><td class="multicolumn">sqlite3<br>
+</td><td class="multicolumn"></td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor index-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Classes</strong></td></tr>
+    
+<tr><td class="decor index-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl>
+<dt class="heading-text">builtins.object
+</dt><dd>
+<dl>
+<dt class="heading-text"><a href="backend.learning_store.html#LearningStore">LearningStore</a>
+</dt></dl>
+</dd>
+</dl>
+ <p>
+<table class="section">
+<tr class="decor title-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><a name="LearningStore">class <strong>LearningStore</strong></a>(builtins.object)</td></tr>
+    
+<tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#LearningStore">LearningStore</a>(path:&nbsp;'Path')<br>
+&nbsp;<br>
+SQLite&nbsp;journal&nbsp;kept&nbsp;outside&nbsp;in-memory&nbsp;dispatcher&nbsp;state.<br>
+&nbsp;<br>
+Predictions&nbsp;and&nbsp;labels&nbsp;are&nbsp;written&nbsp;independently.&nbsp;&nbsp;The&nbsp;export&nbsp;joins&nbsp;them<br>
+only&nbsp;when&nbsp;the&nbsp;request&nbsp;existed&nbsp;before&nbsp;the&nbsp;operational&nbsp;arrival&nbsp;became&nbsp;known.<br>
+Opening&nbsp;a&nbsp;fresh&nbsp;connection&nbsp;per&nbsp;operation&nbsp;keeps&nbsp;the&nbsp;class&nbsp;safe&nbsp;if&nbsp;FastAPI<br>
+moves&nbsp;an&nbsp;operation&nbsp;to&nbsp;another&nbsp;thread&nbsp;later.<br>&nbsp;</span></td></tr>
+<tr><td>&nbsp;</td>
+<td class="singlecolumn">Methods defined here:<br>
+<dl><dt><a name="LearningStore-__init__"><strong>__init__</strong></a>(self, path: 'Path')</dt><dd><span class="code">Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</span></dd></dl>
+
+<dl><dt><a name="LearningStore-examples"><strong>examples</strong></a>(self)</dt><dd><span class="code">Return&nbsp;deterministic&nbsp;rows&nbsp;whose&nbsp;label&nbsp;was&nbsp;unavailable&nbsp;at&nbsp;request&nbsp;time.</span></dd></dl>
+
+<dl><dt><a name="LearningStore-record_arrival"><strong>record_arrival</strong></a>(self, tr_id: 'int', deviation: 'CurrentDeviation') -&gt; 'bool'</dt></dl>
+
+<dl><dt><a name="LearningStore-record_prediction"><strong>record_prediction</strong></a>(self, request: 'PredictionRequest', prediction: 'Prediction', *, published_at: 'datetime') -&gt; 'bool'</dt></dl>
+
+<dl><dt><a name="LearningStore-stats"><strong>stats</strong></a>(self) -&gt; 'dict[str, int]'</dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><span class="code">dictionary&nbsp;for&nbsp;instance&nbsp;variables</span></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><span class="code">list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object</span></dd>
+</dl>
+</td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-sampling_horizon_s"><strong>sampling_horizon_s</strong></a>(tr_id: 'int', target_id: 'str') -&gt; 'int'</dt><dd><span class="code">Stable,&nbsp;approximately&nbsp;uniform&nbsp;target&nbsp;horizon&nbsp;in&nbsp;the&nbsp;allowed&nbsp;window.</span></dd></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>RECENT_TARGET_CACHE</strong> = 100000<br>
+<strong>SCHEMA_VERSION</strong> = 'production-delay-example-v1'</td></tr></table>
+</body></html>

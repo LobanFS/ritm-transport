@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: backend.gps_arrivals</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="backend.html" class="white">backend</a>.gps_arrivals</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="https://github.com/LobanFS/ritm-transport/blob/main/backend/gps_arrivals.py">backend/gps_arrivals.py</a></td></tr></table>
+    <p><span class="code">Причинный&nbsp;детектор&nbsp;посещений&nbsp;остановок&nbsp;по&nbsp;GPS,&nbsp;без&nbsp;ML&nbsp;и&nbsp;истинных&nbsp;прибытий.<br>
+&nbsp;<br>
+Один&nbsp;экземпляр&nbsp;соответствует&nbsp;одному&nbsp;ТС&nbsp;и&nbsp;неизменному&nbsp;упорядоченному&nbsp;плану.<br>
+Пороги&nbsp;—&nbsp;зафиксированная&nbsp;инженерная&nbsp;гипотеза,&nbsp;не&nbsp;результат&nbsp;калибровки<br>
+на&nbsp;организаторских&nbsp;данных.&nbsp;Вызвавший&nbsp;код&nbsp;обязан&nbsp;подавать&nbsp;только&nbsp;уже&nbsp;доступные<br>
+сообщения&nbsp;(event_time&nbsp;и&nbsp;received_at&nbsp;&lt;=&nbsp;его&nbsp;текущих&nbsp;часов).<br>
+&nbsp;<br>
+Без&nbsp;датчиков&nbsp;дверей&nbsp;нужны&nbsp;два&nbsp;медленных&nbsp;измерения&nbsp;в&nbsp;зоне&nbsp;остановки.<br>
+При&nbsp;свежем&nbsp;переходе&nbsp;дверей&nbsp;«закрыты&nbsp;→&nbsp;открыты»&nbsp;достаточно&nbsp;одной&nbsp;медленной<br>
+точки&nbsp;в&nbsp;однозначной&nbsp;плановой&nbsp;зоне;&nbsp;оценка&nbsp;доступна&nbsp;только&nbsp;при&nbsp;получении&nbsp;пакета.<br>
+GPS&nbsp;без&nbsp;дверей&nbsp;не&nbsp;отличает&nbsp;посадку&nbsp;от&nbsp;светофора/затора&nbsp;рядом&nbsp;с&nbsp;остановкой.</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn">math<br>
+</td><td class="multicolumn"></td><td class="multicolumn"></td><td class="multicolumn"></td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor index-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Classes</strong></td></tr>
+    
+<tr><td class="decor index-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl>
+<dt class="heading-text">builtins.object
+</dt><dd>
+<dl>
+<dt class="heading-text"><a href="backend.gps_arrivals.html#GPSArrival">GPSArrival</a>
+</dt><dt class="heading-text"><a href="backend.gps_arrivals.html#GPSArrivalDetector">GPSArrivalDetector</a>
+</dt><dt class="heading-text"><a href="backend.gps_arrivals.html#GPSDetectorConfig">GPSDetectorConfig</a>
+</dt></dl>
+</dd>
+</dl>
+ <p>
+<table class="section">
+<tr class="decor title-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><a name="GPSArrival">class <strong>GPSArrival</strong></a>(builtins.object)</td></tr>
+    
+<tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#GPSArrival">GPSArrival</a>(tr_id:&nbsp;'int',&nbsp;planned_stop_id:&nbsp;'str',&nbsp;arrived_at:&nbsp;'datetime',&nbsp;received_at:&nbsp;'datetime',&nbsp;confirmation_span_s:&nbsp;'float',&nbsp;uncertainty_s:&nbsp;'float&nbsp;|&nbsp;None',&nbsp;skipped_visits:&nbsp;'int'&nbsp;=&nbsp;0,&nbsp;source:&nbsp;'str'&nbsp;=&nbsp;'gps_estimate')&nbsp;-&amp;gt;&nbsp;None<br>
+&nbsp;<br>
+Оценка&nbsp;посещения,&nbsp;а&nbsp;не&nbsp;подтверждённое&nbsp;диспетчером&nbsp;событие.<br>
+&nbsp;<br>
+uncertainty_s&nbsp;—&nbsp;расстояние&nbsp;по&nbsp;времени&nbsp;от&nbsp;предыдущей&nbsp;пригодной&nbsp;точки&nbsp;до<br>
+первого&nbsp;наблюдения&nbsp;в&nbsp;зоне;&nbsp;это&nbsp;дискретность&nbsp;наблюдений,&nbsp;НЕ&nbsp;доверительный<br>
+интервал&nbsp;и&nbsp;НЕ&nbsp;верхняя&nbsp;граница&nbsp;ошибки.&nbsp;При&nbsp;холодном&nbsp;старте/разрыве&nbsp;—&nbsp;None.<br>
+skipped_visits&nbsp;—&nbsp;число&nbsp;пропущенных&nbsp;в&nbsp;плане&nbsp;записей&nbsp;без&nbsp;созданных&nbsp;прибытий.<br>&nbsp;</span></td></tr>
+<tr><td>&nbsp;</td>
+<td class="singlecolumn">Methods defined here:<br>
+<dl><dt><a name="GPSArrival-__delattr__"><strong>__delattr__</strong></a>(self, name)</dt><dd><span class="code">Implement&nbsp;delattr(self,&nbsp;name).</span></dd></dl>
+
+<dl><dt><a name="GPSArrival-__eq__"><strong>__eq__</strong></a>(self, other)</dt><dd><span class="code">Return&nbsp;self==value.</span></dd></dl>
+
+<dl><dt><a name="GPSArrival-__hash__"><strong>__hash__</strong></a>(self)</dt><dd><span class="code">Return&nbsp;hash(self).</span></dd></dl>
+
+<dl><dt><a name="GPSArrival-__init__"><strong>__init__</strong></a>(self, tr_id: 'int', planned_stop_id: 'str', arrived_at: 'datetime', received_at: 'datetime', confirmation_span_s: 'float', uncertainty_s: 'float | None', skipped_visits: 'int' = 0, source: 'str' = 'gps_estimate') -&gt; None</dt><dd><span class="code">Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</span></dd></dl>
+
+<dl><dt><a name="GPSArrival-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><span class="code">Return&nbsp;repr(self).</span></dd></dl>
+
+<dl><dt><a name="GPSArrival-__setattr__"><strong>__setattr__</strong></a>(self, name, value)</dt><dd><span class="code">Implement&nbsp;setattr(self,&nbsp;name,&nbsp;value).</span></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><span class="code">dictionary&nbsp;for&nbsp;instance&nbsp;variables</span></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><span class="code">list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object</span></dd>
+</dl>
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>__annotations__</strong> = {'arrived_at': 'datetime', 'confirmation_span_s': 'float', 'planned_stop_id': 'str', 'received_at': 'datetime', 'skipped_visits': 'int', 'source': 'str', 'tr_id': 'int', 'uncertainty_s': 'float | None'}</dl>
+
+<dl><dt><strong>__dataclass_fields__</strong> = {'arrived_at': Field(name='arrived_at',type='datetime',default=...appingproxy({}),kw_only=False,_field_type=_FIELD), 'confirmation_span_s': Field(name='confirmation_span_s',type='float',de...appingproxy({}),kw_only=False,_field_type=_FIELD), 'planned_stop_id': Field(name='planned_stop_id',type='str',default=...appingproxy({}),kw_only=False,_field_type=_FIELD), 'received_at': Field(name='received_at',type='datetime',default...appingproxy({}),kw_only=False,_field_type=_FIELD), 'skipped_visits': Field(name='skipped_visits',type='int',default=0...appingproxy({}),kw_only=False,_field_type=_FIELD), 'source': Field(name='source',type='str',default='gps_esti...appingproxy({}),kw_only=False,_field_type=_FIELD), 'tr_id': Field(name='tr_id',type='int',default=&lt;dataclass...appingproxy({}),kw_only=False,_field_type=_FIELD), 'uncertainty_s': Field(name='uncertainty_s',type='float | None',d...appingproxy({}),kw_only=False,_field_type=_FIELD)}</dl>
+
+<dl><dt><strong>__dataclass_params__</strong> = _DataclassParams(init=True,repr=True,eq=True,ord...rue,kw_only=False,slots=False,weakref_slot=False)</dl>
+
+<dl><dt><strong>__match_args__</strong> = ('tr_id', 'planned_stop_id', 'arrived_at', 'received_at', 'confirmation_span_s', 'uncertainty_s', 'skipped_visits', 'source')</dl>
+
+<dl><dt><strong>skipped_visits</strong> = 0</dl>
+
+<dl><dt><strong>source</strong> = 'gps_estimate'</dl>
+
+</td></tr></table> <p>
+<table class="section">
+<tr class="decor title-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><a name="GPSArrivalDetector">class <strong>GPSArrivalDetector</strong></a>(builtins.object)</td></tr>
+    
+<tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#GPSArrivalDetector">GPSArrivalDetector</a>(stops:&nbsp;'list[StopTarget]',&nbsp;config:&nbsp;'<a href="#GPSDetectorConfig">GPSDetectorConfig</a>&nbsp;|&nbsp;None'&nbsp;=&nbsp;None)<br>
+&nbsp;<br>
+План&nbsp;→&nbsp;кандидат&nbsp;→&nbsp;подтверждение&nbsp;→&nbsp;выход&nbsp;с&nbsp;гистерезисом.<br>
+&nbsp;<br>
+Холодный&nbsp;старт&nbsp;и&nbsp;восстановление&nbsp;после&nbsp;пропуска&nbsp;требуют&nbsp;единственного<br>
+пространственного/временного&nbsp;соответствия.&nbsp;Одинаковые&nbsp;координаты&nbsp;разных<br>
+посещений&nbsp;внутри&nbsp;окна&nbsp;не&nbsp;разрешаются&nbsp;выбором&nbsp;ближайшего&nbsp;времени:&nbsp;unknown.<br>
+После&nbsp;якоря&nbsp;используются&nbsp;только&nbsp;следующие&nbsp;посещения,&nbsp;по&nbsp;времени&nbsp;с&nbsp;учётом<br>
+последнего&nbsp;оценённого&nbsp;отклонения.&nbsp;Нет&nbsp;обратного&nbsp;заполнения&nbsp;пропущенных&nbsp;фактов.<br>&nbsp;</span></td></tr>
+<tr><td>&nbsp;</td>
+<td class="singlecolumn">Methods defined here:<br>
+<dl><dt><a name="GPSArrivalDetector-__init__"><strong>__init__</strong></a>(self, stops: 'list[StopTarget]', config: 'GPSDetectorConfig | None' = None)</dt><dd><span class="code">Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</span></dd></dl>
+
+<dl><dt><a name="GPSArrivalDetector-observe"><strong>observe</strong></a>(self, point: 'Telemetry') -&gt; 'GPSArrival | None'</dt><dd><span class="code">Принять&nbsp;один&nbsp;доступный&nbsp;GPS;&nbsp;запоздавшие&nbsp;события&nbsp;не&nbsp;меняют&nbsp;оценённый&nbsp;факт.</span></dd></dl>
+
+<dl><dt><a name="GPSArrivalDetector-status"><strong>status</strong></a>(self) -&gt; 'dict'</dt><dd><span class="code">Компактная&nbsp;JSON-совместимая&nbsp;диагностика&nbsp;без&nbsp;доступа&nbsp;к&nbsp;истине&nbsp;генератора.</span></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><span class="code">dictionary&nbsp;for&nbsp;instance&nbsp;variables</span></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><span class="code">list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object</span></dd>
+</dl>
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>version</strong> = 'gps-arrivals-v6-terminal-reentry'</dl>
+
+</td></tr></table> <p>
+<table class="section">
+<tr class="decor title-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><a name="GPSDetectorConfig">class <strong>GPSDetectorConfig</strong></a>(builtins.object)</td></tr>
+    
+<tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#GPSDetectorConfig">GPSDetectorConfig</a>(enter_radius_m:&nbsp;'float'&nbsp;=&nbsp;35.0,&nbsp;exit_radius_m:&nbsp;'float'&nbsp;=&nbsp;70.0,&nbsp;max_stop_speed_kmh:&nbsp;'float'&nbsp;=&nbsp;5.0,&nbsp;confirmation_s:&nbsp;'float'&nbsp;=&nbsp;5.0,&nbsp;min_points:&nbsp;'int'&nbsp;=&nbsp;2,&nbsp;max_gap_s:&nbsp;'float'&nbsp;=&nbsp;30.0,&nbsp;schedule_window_s:&nbsp;'float'&nbsp;=&nbsp;900.0)&nbsp;-&amp;gt;&nbsp;None<br>
+&nbsp;<br>
+Фиксированные&nbsp;пороги;&nbsp;evaluator&nbsp;обязан&nbsp;записывать&nbsp;их&nbsp;вместе&nbsp;с&nbsp;результатом.<br>&nbsp;</span></td></tr>
+<tr><td>&nbsp;</td>
+<td class="singlecolumn">Methods defined here:<br>
+<dl><dt><a name="GPSDetectorConfig-__delattr__"><strong>__delattr__</strong></a>(self, name)</dt><dd><span class="code">Implement&nbsp;delattr(self,&nbsp;name).</span></dd></dl>
+
+<dl><dt><a name="GPSDetectorConfig-__eq__"><strong>__eq__</strong></a>(self, other)</dt><dd><span class="code">Return&nbsp;self==value.</span></dd></dl>
+
+<dl><dt><a name="GPSDetectorConfig-__hash__"><strong>__hash__</strong></a>(self)</dt><dd><span class="code">Return&nbsp;hash(self).</span></dd></dl>
+
+<dl><dt><a name="GPSDetectorConfig-__init__"><strong>__init__</strong></a>(self, enter_radius_m: 'float' = 35.0, exit_radius_m: 'float' = 70.0, max_stop_speed_kmh: 'float' = 5.0, confirmation_s: 'float' = 5.0, min_points: 'int' = 2, max_gap_s: 'float' = 30.0, schedule_window_s: 'float' = 900.0) -&gt; None</dt><dd><span class="code">Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</span></dd></dl>
+
+<dl><dt><a name="GPSDetectorConfig-__post_init__"><strong>__post_init__</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="GPSDetectorConfig-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><span class="code">Return&nbsp;repr(self).</span></dd></dl>
+
+<dl><dt><a name="GPSDetectorConfig-__setattr__"><strong>__setattr__</strong></a>(self, name, value)</dt><dd><span class="code">Implement&nbsp;setattr(self,&nbsp;name,&nbsp;value).</span></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><span class="code">dictionary&nbsp;for&nbsp;instance&nbsp;variables</span></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><span class="code">list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object</span></dd>
+</dl>
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>__annotations__</strong> = {'confirmation_s': 'float', 'enter_radius_m': 'float', 'exit_radius_m': 'float', 'max_gap_s': 'float', 'max_stop_speed_kmh': 'float', 'min_points': 'int', 'schedule_window_s': 'float'}</dl>
+
+<dl><dt><strong>__dataclass_fields__</strong> = {'confirmation_s': Field(name='confirmation_s',type='float',default...appingproxy({}),kw_only=False,_field_type=_FIELD), 'enter_radius_m': Field(name='enter_radius_m',type='float',default...appingproxy({}),kw_only=False,_field_type=_FIELD), 'exit_radius_m': Field(name='exit_radius_m',type='float',default=...appingproxy({}),kw_only=False,_field_type=_FIELD), 'max_gap_s': Field(name='max_gap_s',type='float',default=30.0...appingproxy({}),kw_only=False,_field_type=_FIELD), 'max_stop_speed_kmh': Field(name='max_stop_speed_kmh',type='float',def...appingproxy({}),kw_only=False,_field_type=_FIELD), 'min_points': Field(name='min_points',type='int',default=2,def...appingproxy({}),kw_only=False,_field_type=_FIELD), 'schedule_window_s': Field(name='schedule_window_s',type='float',defa...appingproxy({}),kw_only=False,_field_type=_FIELD)}</dl>
+
+<dl><dt><strong>__dataclass_params__</strong> = _DataclassParams(init=True,repr=True,eq=True,ord...rue,kw_only=False,slots=False,weakref_slot=False)</dl>
+
+<dl><dt><strong>__match_args__</strong> = ('enter_radius_m', 'exit_radius_m', 'max_stop_speed_kmh', 'confirmation_s', 'min_points', 'max_gap_s', 'schedule_window_s')</dl>
+
+<dl><dt><strong>confirmation_s</strong> = 5.0</dl>
+
+<dl><dt><strong>enter_radius_m</strong> = 35.0</dl>
+
+<dl><dt><strong>exit_radius_m</strong> = 70.0</dl>
+
+<dl><dt><strong>max_gap_s</strong> = 30.0</dl>
+
+<dl><dt><strong>max_stop_speed_kmh</strong> = 5.0</dl>
+
+<dl><dt><strong>min_points</strong> = 2</dl>
+
+<dl><dt><strong>schedule_window_s</strong> = 900.0</dl>
+
+</td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-distance_m"><strong>distance_m</strong></a>(lat: 'float', lon: 'float', stop: 'StopTarget') -&gt; 'float'</dt><dd><span class="code">Гаверсин;&nbsp;координаты&nbsp;остановки&nbsp;берутся&nbsp;из&nbsp;входного&nbsp;плана.</span></dd></dl>
+</td></tr></table>
+</body></html>

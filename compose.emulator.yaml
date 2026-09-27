@@ -1,0 +1,8 @@
+# Не включён по умолчанию: образ предварительно загружается из раздачи.
+services:
+  emulator:
+    image: ndtp-telemetry-emulator:1.0
+    platform: linux/amd64
+    ports: ['127.0.0.1:18080:18080']
+    depends_on:
+      backend: {condition: service_healthy}

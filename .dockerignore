@@ -1,0 +1,12 @@
+.venv
+__pycache__
+.pytest_cache
+.git
+.env*
+data
+models
+artifacts
+*.csv
+*.parquet
+*.tar
+*.zip

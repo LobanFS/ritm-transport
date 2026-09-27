@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: backend.ndtp</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="backend.html" class="white">backend</a>.ndtp</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="https://github.com/LobanFS/ritm-transport/blob/main/backend/ndtp.py">backend/ndtp.py</a></td></tr></table>
+    <p><span class="code">Ограниченный&nbsp;TCP-приёмник&nbsp;формата&nbsp;NDTP&nbsp;6.2&nbsp;из&nbsp;спецификации&nbsp;эмулятора.<br>
+&nbsp;<br>
+Принимаются&nbsp;handshake&nbsp;и&nbsp;realtime&nbsp;с&nbsp;Nav00&nbsp;и&nbsp;опциональными&nbsp;дверями&nbsp;IRMA04.<br>
+Другие&nbsp;ячейки&nbsp;пропускаются<br>
+только&nbsp;при&nbsp;известной&nbsp;длине&nbsp;payload.&nbsp;Неизвестная&nbsp;ячейка&nbsp;отклоняет&nbsp;весь&nbsp;кадр.<br>
+Формат&nbsp;ответа&nbsp;ACK&nbsp;в&nbsp;спецификации&nbsp;не&nbsp;задан,&nbsp;а&nbsp;эмулятор&nbsp;ответы&nbsp;не&nbsp;разбирает:<br>
+этот&nbsp;приёмник&nbsp;не&nbsp;отправляет&nbsp;ACK.&nbsp;Сопоставление&nbsp;unit_id&nbsp;с&nbsp;рейсом&nbsp;выполняется<br>
+снаружи,&nbsp;как&nbsp;и&nbsp;назначение&nbsp;received_at&nbsp;при&nbsp;вызове&nbsp;on_nav.</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn">asyncio<br>
+</td><td class="multicolumn">hashlib<br>
+</td><td class="multicolumn">logging<br>
+</td><td class="multicolumn">struct<br>
+</td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor index-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Classes</strong></td></tr>
+    
+<tr><td class="decor index-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl>
+<dt class="heading-text">builtins.ValueError(builtins.Exception)
+</dt><dd>
+<dl>
+<dt class="heading-text"><a href="backend.ndtp.html#NDTPError">NDTPError</a>
+</dt></dl>
+</dd>
+<dt class="heading-text">builtins.object
+</dt><dd>
+<dl>
+<dt class="heading-text"><a href="backend.ndtp.html#NDTPServer">NDTPServer</a>
+</dt><dt class="heading-text"><a href="backend.ndtp.html#ParsedFrame">ParsedFrame</a>
+</dt></dl>
+</dd>
+</dl>
+ <p>
+<table class="section">
+<tr class="decor title-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><a name="NDTPError">class <strong>NDTPError</strong></a>(builtins.ValueError)</td></tr>
+    
+<tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#NDTPError">NDTPError</a>(reason:&nbsp;'str',&nbsp;detail:&nbsp;'str'&nbsp;=&nbsp;'')&nbsp;-&amp;gt;&nbsp;'None'<br>
+&nbsp;<br>
+Ошибка&nbsp;кадра&nbsp;со&nbsp;стабильным&nbsp;кодом&nbsp;reason&nbsp;для&nbsp;счётчиков&nbsp;приёмника.<br>&nbsp;</span></td></tr>
+<tr><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt>Method resolution order:</dt>
+<dd><a href="backend.ndtp.html#NDTPError">NDTPError</a></dd>
+<dd>builtins.ValueError</dd>
+<dd>builtins.Exception</dd>
+<dd>builtins.BaseException</dd>
+<dd>builtins.object</dd>
+</dl>
+<hr>
+Methods defined here:<br>
+<dl><dt><a name="NDTPError-__init__"><strong>__init__</strong></a>(self, reason: 'str', detail: 'str' = '') -&gt; 'None'</dt><dd><span class="code">Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</span></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><span class="code">list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object</span></dd>
+</dl>
+<hr>
+Static methods inherited from builtins.ValueError:<br>
+<dl><dt><a name="NDTPError-__new__"><strong>__new__</strong></a>(*args, **kwargs)<span class="grey"><span class="heading-text"> class method of builtins.ValueError</span></span></dt><dd><span class="code">Create&nbsp;and&nbsp;return&nbsp;a&nbsp;new&nbsp;object.&nbsp;&nbsp;See&nbsp;help(type)&nbsp;for&nbsp;accurate&nbsp;signature.</span></dd></dl>
+
+<hr>
+Methods inherited from builtins.BaseException:<br>
+<dl><dt><a name="NDTPError-__getattribute__"><strong>__getattribute__</strong></a>(self, name, /)</dt><dd><span class="code">Return&nbsp;getattr(self,&nbsp;name).</span></dd></dl>
+
+<dl><dt><a name="NDTPError-__reduce__"><strong>__reduce__</strong></a>(...)</dt><dd><span class="code">Helper&nbsp;for&nbsp;pickle.</span></dd></dl>
+
+<dl><dt><a name="NDTPError-__repr__"><strong>__repr__</strong></a>(self, /)</dt><dd><span class="code">Return&nbsp;repr(self).</span></dd></dl>
+
+<dl><dt><a name="NDTPError-__setstate__"><strong>__setstate__</strong></a>(...)</dt></dl>
+
+<dl><dt><a name="NDTPError-__str__"><strong>__str__</strong></a>(self, /)</dt><dd><span class="code">Return&nbsp;str(self).</span></dd></dl>
+
+<dl><dt><a name="NDTPError-add_note"><strong>add_note</strong></a>(...)</dt><dd><span class="code">Exception.<a href="#NDTPError-add_note">add_note</a>(note)&nbsp;--<br>
+add&nbsp;a&nbsp;note&nbsp;to&nbsp;the&nbsp;exception</span></dd></dl>
+
+<dl><dt><a name="NDTPError-with_traceback"><strong>with_traceback</strong></a>(...)</dt><dd><span class="code">Exception.<a href="#NDTPError-with_traceback">with_traceback</a>(tb)&nbsp;--<br>
+set&nbsp;self.<strong>__traceback__</strong>&nbsp;to&nbsp;tb&nbsp;and&nbsp;return&nbsp;self.</span></dd></dl>
+
+<hr>
+Data descriptors inherited from builtins.BaseException:<br>
+<dl><dt><strong>__cause__</strong></dt>
+<dd><span class="code">exception&nbsp;cause</span></dd>
+</dl>
+<dl><dt><strong>__context__</strong></dt>
+<dd><span class="code">exception&nbsp;context</span></dd>
+</dl>
+<dl><dt><strong>__dict__</strong></dt>
+</dl>
+<dl><dt><strong>__suppress_context__</strong></dt>
+</dl>
+<dl><dt><strong>__traceback__</strong></dt>
+</dl>
+<dl><dt><strong>args</strong></dt>
+</dl>
+</td></tr></table> <p>
+<table class="section">
+<tr class="decor title-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><a name="NDTPServer">class <strong>NDTPServer</strong></a>(builtins.object)</td></tr>
+    
+<tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#NDTPServer">NDTPServer</a>(on_nav:&nbsp;'Callable[[int,&nbsp;dict],&nbsp;Awaitable[None]]',&nbsp;on_error:&nbsp;'Callable[[str],&nbsp;None]',&nbsp;host:&nbsp;'str'&nbsp;=&nbsp;'0.0.0.0',&nbsp;port:&nbsp;'int'&nbsp;=&nbsp;9201,&nbsp;*,&nbsp;max_connections:&nbsp;'int'&nbsp;=&nbsp;128,&nbsp;idle_timeout:&nbsp;'float'&nbsp;=&nbsp;30.0,&nbsp;callback_timeout:&nbsp;'float'&nbsp;=&nbsp;10.0)&nbsp;-&amp;gt;&nbsp;'None'<br>
+&nbsp;<br>
+Принимает&nbsp;NDTP&nbsp;с&nbsp;ограничениями&nbsp;памяти,&nbsp;соединений&nbsp;и&nbsp;времени&nbsp;ожидания.<br>
+&nbsp;<br>
+on_nav&nbsp;вызывается&nbsp;последовательно&nbsp;в&nbsp;каждом&nbsp;соединении&nbsp;и&nbsp;ожидается&nbsp;до<br>
+чтения&nbsp;следующего&nbsp;кадра:&nbsp;неограниченной&nbsp;очереди&nbsp;событий&nbsp;нет.&nbsp;on_error&nbsp;—<br>
+синхронный&nbsp;короткий&nbsp;callback;&nbsp;error_counts&nbsp;содержит&nbsp;счётчики&nbsp;по&nbsp;reason.<br>
+Повреждённый&nbsp;полный&nbsp;кадр&nbsp;пропускается;&nbsp;ошибка&nbsp;framing&nbsp;закрывает&nbsp;соединение.<br>
+После&nbsp;каждого&nbsp;reconnect&nbsp;требуется&nbsp;новый&nbsp;корректный&nbsp;handshake.<br>&nbsp;</span></td></tr>
+<tr><td>&nbsp;</td>
+<td class="singlecolumn">Methods defined here:<br>
+<dl><dt><a name="NDTPServer-__init__"><strong>__init__</strong></a>(self, on_nav: 'Callable[[int, dict], Awaitable[None]]', on_error: 'Callable[[str], None]', host: 'str' = '0.0.0.0', port: 'int' = 9201, *, max_connections: 'int' = 128, idle_timeout: 'float' = 30.0, callback_timeout: 'float' = 10.0) -&gt; 'None'</dt><dd><span class="code">Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</span></dd></dl>
+
+<dl><dt>async <a name="NDTPServer-close"><strong>close</strong></a>(self) -&gt; 'None'</dt><dd><span class="code">Останавливает&nbsp;приём,&nbsp;закрывает&nbsp;сокеты&nbsp;и&nbsp;дожидается&nbsp;обработчиков.</span></dd></dl>
+
+<dl><dt>async <a name="NDTPServer-start"><strong>start</strong></a>(self) -&gt; 'None'</dt><dd><span class="code">Запускает&nbsp;TCP&nbsp;listener;&nbsp;при&nbsp;port=0&nbsp;сохраняет&nbsp;выбранный&nbsp;порт&nbsp;в&nbsp;port.</span></dd></dl>
+
+<hr>
+Readonly properties defined here:<br>
+<dl><dt><strong>connections</strong></dt>
+<dd><span class="code">Возвращает&nbsp;число&nbsp;принятых&nbsp;и&nbsp;ещё&nbsp;не&nbsp;закрытых&nbsp;соединений.</span></dd>
+</dl>
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><span class="code">dictionary&nbsp;for&nbsp;instance&nbsp;variables</span></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><span class="code">list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object</span></dd>
+</dl>
+</td></tr></table> <p>
+<table class="section">
+<tr class="decor title-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><a name="ParsedFrame">class <strong>ParsedFrame</strong></a>(builtins.object)</td></tr>
+    
+<tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#ParsedFrame">ParsedFrame</a>(unit_id:&nbsp;'int',&nbsp;kind:&nbsp;"Literal['handshake',&nbsp;'realtime']",&nbsp;nav:&nbsp;'dict&nbsp;|&nbsp;None')&nbsp;-&amp;gt;&nbsp;None<br>
+&nbsp;<br>
+Проверенный&nbsp;кадр:&nbsp;идентификатор&nbsp;устройства,&nbsp;вид&nbsp;и&nbsp;навигация.<br>&nbsp;</span></td></tr>
+<tr><td>&nbsp;</td>
+<td class="singlecolumn">Methods defined here:<br>
+<dl><dt><a name="ParsedFrame-__delattr__"><strong>__delattr__</strong></a>(self, name)</dt><dd><span class="code">Implement&nbsp;delattr(self,&nbsp;name).</span></dd></dl>
+
+<dl><dt><a name="ParsedFrame-__eq__"><strong>__eq__</strong></a>(self, other)</dt><dd><span class="code">Return&nbsp;self==value.</span></dd></dl>
+
+<dl><dt><a name="ParsedFrame-__getstate__"><strong>__getstate__</strong></a> = _dataclass_getstate(self)<span class="grey"><span class="heading-text"> from dataclasses</span></span></dt><dd><span class="code">#&nbsp;_dataclass_getstate&nbsp;and&nbsp;_dataclass_setstate&nbsp;are&nbsp;needed&nbsp;for&nbsp;pickling&nbsp;frozen<br>
+#&nbsp;classes&nbsp;with&nbsp;slots.&nbsp;&nbsp;These&nbsp;could&nbsp;be&nbsp;slightly&nbsp;more&nbsp;performant&nbsp;if&nbsp;we&nbsp;generated<br>
+#&nbsp;the&nbsp;code&nbsp;instead&nbsp;of&nbsp;iterating&nbsp;over&nbsp;fields.&nbsp;&nbsp;But&nbsp;that&nbsp;can&nbsp;be&nbsp;a&nbsp;project&nbsp;for<br>
+#&nbsp;another&nbsp;day,&nbsp;if&nbsp;performance&nbsp;becomes&nbsp;an&nbsp;issue.</span></dd></dl>
+
+<dl><dt><a name="ParsedFrame-__hash__"><strong>__hash__</strong></a>(self)</dt><dd><span class="code">Return&nbsp;hash(self).</span></dd></dl>
+
+<dl><dt><a name="ParsedFrame-__init__"><strong>__init__</strong></a>(self, unit_id: 'int', kind: "Literal['handshake', 'realtime']", nav: 'dict | None') -&gt; None</dt><dd><span class="code">Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</span></dd></dl>
+
+<dl><dt><a name="ParsedFrame-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><span class="code">Return&nbsp;repr(self).</span></dd></dl>
+
+<dl><dt><a name="ParsedFrame-__setattr__"><strong>__setattr__</strong></a>(self, name, value)</dt><dd><span class="code">Implement&nbsp;setattr(self,&nbsp;name,&nbsp;value).</span></dd></dl>
+
+<dl><dt><a name="ParsedFrame-__setstate__"><strong>__setstate__</strong></a> = _dataclass_setstate(self, state)<span class="grey"><span class="heading-text"> from dataclasses</span></span></dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>kind</strong></dt>
+</dl>
+<dl><dt><strong>nav</strong></dt>
+</dl>
+<dl><dt><strong>unit_id</strong></dt>
+</dl>
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>__annotations__</strong> = {'kind': "Literal['handshake', 'realtime']", 'nav': 'dict | None', 'unit_id': 'int'}</dl>
+
+<dl><dt><strong>__dataclass_fields__</strong> = {'kind': Field(name='kind',type="Literal['handshake', 're...appingproxy({}),kw_only=False,_field_type=_FIELD), 'nav': Field(name='nav',type='dict | None',default=&lt;dat...appingproxy({}),kw_only=False,_field_type=_FIELD), 'unit_id': Field(name='unit_id',type='int',default=&lt;datacla...appingproxy({}),kw_only=False,_field_type=_FIELD)}</dl>
+
+<dl><dt><strong>__dataclass_params__</strong> = _DataclassParams(init=True,repr=True,eq=True,ord...True,kw_only=False,slots=True,weakref_slot=False)</dl>
+
+<dl><dt><strong>__match_args__</strong> = ('unit_id', 'kind', 'nav')</dl>
+
+</td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-crc16_modbus"><strong>crc16_modbus</strong></a>(data: 'bytes') -&gt; 'int'</dt><dd><span class="code">Вычисляет&nbsp;CRC-16/Modbus&nbsp;до&nbsp;перестановки&nbsp;байтов&nbsp;для&nbsp;заголовка&nbsp;NPL.</span></dd></dl>
+ <dl><dt><a name="-parse_frame"><strong>parse_frame</strong></a>(frame: 'bytes') -&gt; 'ParsedFrame'</dt><dd><span class="code">Разбирает&nbsp;один&nbsp;полный&nbsp;кадр;&nbsp;при&nbsp;любой&nbsp;ошибке&nbsp;поднимает&nbsp;<a href="#NDTPError">NDTPError</a>.<br>
+&nbsp;<br>
+Проверяет&nbsp;обе&nbsp;длины,&nbsp;signature,&nbsp;CRC&nbsp;со&nbsp;свапом&nbsp;байтов,&nbsp;поддерживаемые<br>
+заголовки&nbsp;и&nbsp;все&nbsp;ячейки&nbsp;до&nbsp;возврата&nbsp;навигации.&nbsp;Состояние&nbsp;TCP-handshake<br>
+проверяет&nbsp;<a href="#NDTPServer">NDTPServer</a>,&nbsp;поскольку&nbsp;один&nbsp;кадр&nbsp;его&nbsp;не&nbsp;содержит.<br>
+Недостоверные&nbsp;либо&nbsp;географически&nbsp;невозможные&nbsp;координаты&nbsp;сохраняются<br>
+без&nbsp;исправления,&nbsp;но&nbsp;получают&nbsp;location_valid=False.</span></dd></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>Literal</strong> = typing.Literal<br>
+<strong>MAX_FRAME_SIZE</strong> = 65535<br>
+<strong>NPH_SIZE</strong> = 10<br>
+<strong>NPL_SIZE</strong> = 15</td></tr></table>
+</body></html>

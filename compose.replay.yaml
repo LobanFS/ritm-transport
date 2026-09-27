@@ -1,0 +1,12 @@
+# REPLAY_DATA_DIR — корень распакованного dataset на хосте, вне Git и образов.
+services:
+  backend:
+    environment:
+      REPLAY_DATA_DIR: /data/dataset
+    volumes:
+      - type: bind
+        source: ${REPLAY_DATA_DIR:?Укажите REPLAY_DATA_DIR — каталог dataset}
+        target: /data/dataset
+        read_only: true
+        bind:
+          create_host_path: false

@@ -1,0 +1,11 @@
+{
+  "url": "https://github.com/LobanFS/ritm-transport/releases/download/v1.0.0/ritm-model-v1.zip",
+  "sha256": "e7a6536d65e3820d2931e9e496ba5b7ba0df9ff4191c243ed0a99cdc4891a20f",
+  "files": {
+    "encoder.pt": "729174c663a6fe4c1a1f657543f16538b9a8ff7b7d33cdff1c9c4f96f4303a73",
+    "explanation_reference.json": "23235701618b96e7ea42b339145ffba7c46f8b2a86ac6ca7be88756545909427",
+    "manifest.json": "efb0695edecc7017ed64f04739045e59229b056192914aef6db2fa93b45286ed",
+    "model.joblib": "bfed9d9608fd707a634605900ac75d81e863309c29105c9b5183491965289905",
+    "probability.json": "81a4c1d289f6b9ecd2e0db279e4861848c1f36a5e50454d4b5c48aa1eeaa762c"
+  }
+}

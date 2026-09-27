@@ -1,0 +1,53 @@
+name: ritm-transport
+services:
+  generator:
+    profiles: [generator]
+    build: .
+    command: [python, -m, uvicorn, 'generator.app:app', --host, 0.0.0.0, --port, '8002']
+    ports: ['127.0.0.1:8002:8002']
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8002/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+  ml:
+    build: .
+    command: [python, -m, uvicorn, 'ml_service.app:app', --host, 0.0.0.0, --port, '8001']
+    ports: ['127.0.0.1:8001:8001']
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+  backend:
+    build: .
+    environment:
+      ML_URL: http://ml:8001
+      GENERATOR_URL: http://generator:8002
+      INITIAL_MODE: live
+      NDTP_HOST: 0.0.0.0
+      NDTP_PORT: '9201'
+    ports: ['127.0.0.1:8000:8000', '127.0.0.1:9201:9201']
+    depends_on:
+      ml: {condition: service_healthy}
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+  dashboard:
+    build:
+      context: .
+      dockerfile: dashboard.Dockerfile
+    environment:
+      DASHBOARD_UI_MODE: ${DASHBOARD_UI_MODE:-full}
+    ports: ['127.0.0.1:8080:8080']
+    depends_on:
+      backend: {condition: service_healthy}
+    restart: unless-stopped

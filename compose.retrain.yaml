@@ -1,0 +1,54 @@
+# Weekly HGBR candidate training. Use together with compose.learning.yaml.
+services:
+  model-trainer:
+    build:
+      context: .
+      dockerfile: Dockerfile.train
+    entrypoint: [python, -m, training.scheduler]
+    # The SQLite WAL journal is owned by backend UID 10001. Keep that UID;
+    # use the host group only for the group-writable output bind directory.
+    user: '10001:${RETRAIN_GID:-10001}'
+    environment:
+      LEARNING_STORE_PATH: /learning/learning.sqlite3
+      CURRENT_MODEL_PATH: /models/model.joblib
+      CURRENT_ENCODER_PATH: /models/encoder.pt
+      CURRENT_MANIFEST_PATH: ${MODEL_MANIFEST_PATH:-}
+      RETRAIN_DATASET_PATH: /dataset
+      RETRAIN_SEQUENCES_PATH: /sequences/sequences.npz
+      RETRAIN_OUTPUT_PATH: /outputs
+      RETRAIN_INTERVAL_SECONDS: ${RETRAIN_INTERVAL_SECONDS:-604800}
+      RETRAIN_MINIMUM_NEW_TARGETS: ${RETRAIN_MINIMUM_NEW_TARGETS:-200}
+      RETRAIN_VALIDATION_FRACTION: ${RETRAIN_VALIDATION_FRACTION:-0.2}
+      RETRAIN_MAXIMUM_MAE_REGRESSION_S: ${RETRAIN_MAXIMUM_MAE_REGRESSION_S:-0}
+      RETRAIN_RUN_ON_START: ${RETRAIN_RUN_ON_START:-true}
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+    volumes:
+      - learning-data:/learning
+      - type: bind
+        source: ${MODEL_DIR:-./artifacts/model}
+        target: /models
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${RETRAIN_DATA_DIR:?Set RETRAIN_DATA_DIR to the official dataset directory}
+        target: /dataset
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${RETRAIN_SEQUENCES_DIR:?Set RETRAIN_SEQUENCES_DIR to the directory containing sequences.npz}
+        target: /sequences
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${RETRAIN_OUTPUT_DIR:-./artifacts/retraining}
+        target: /outputs
+    depends_on:
+      backend: {condition: service_healthy}
+    restart: unless-stopped
+volumes:
+  learning-data:

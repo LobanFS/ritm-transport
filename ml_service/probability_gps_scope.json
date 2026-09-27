@@ -1,0 +1,22 @@
+{
+  "schema_version": "gps-probability-scope-v1",
+  "validation_status": "accepted_secondary_diagnostic",
+  "scope": "historical_real_gps_estimate",
+  "regression_model_sha256": "bfed9d9608fd707a634605900ac75d81e863309c29105c9b5183491965289905",
+  "probability_artifact_sha256": "81a4c1d289f6b9ecd2e0db279e4861848c1f36a5e50454d4b5c48aa1eeaa762c",
+  "detector_version": "gps-arrivals-v6-terminal-reentry",
+  "detector_sha256": "cfedfc28f3d58ea7c8c276205e73a83877a53c701829162c8fd294a25a98c7b5",
+  "contract_sha256": "99769374ad60b8089b3bf2683f95cc91e07930b5510dbfbfc1ba5628835f8731",
+  "report_sha256": "aa620b29cd63ec8014423307dd3128400a7621377a3b000f43c7ec404ce26120",
+  "report_path": "artifacts/probability-refresh/gps/evaluation/report.json",
+  "evaluated_rows": 99,
+  "total_rows": 353,
+  "positives": 23,
+  "vehicles": 11,
+  "brier": 0.12023631248198081,
+  "constant_brier": 0.1784016278826037,
+  "log_loss": 0.3810930503625579,
+  "constant_log_loss": 0.5422176440037438,
+  "cluster_improvement_p05": 0.026489053916448294,
+  "expected_calibration_error": 0.03562589921960734
+}

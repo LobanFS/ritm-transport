@@ -1,0 +1,3792 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Транспорт · Backend",
+    "description": "Диспетчерская система: demo, отдельный synthetic generator, live NDTP и CSV replay. Отдельный ML-сервис с frozen-моделью; при недоступности — явный persistence fallback. Времена RFC3339 с offset.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Состояние"
+        ],
+        "summary": "Health",
+        "description": "Живость backend; недоступность ML отдельно отмечена и не роняет процесс.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/state": {
+      "get": {
+        "tags": [
+          "Диспетчер"
+        ],
+        "summary": "State",
+        "description": "Атомарное состояние карты, ТС и предупреждений. Обновление UI раз в секунду.",
+        "operationId": "state_api_v1_state_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metrics": {
+      "get": {
+        "tags": [
+          "Состояние"
+        ],
+        "summary": "Metrics",
+        "description": "Счётчики процесса; p95 HTTP ML и полного цикла последних 200 вызовов, без ожидания цикла/UI.",
+        "operationId": "metrics_api_v1_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Metrics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/incidents/export": {
+      "get": {
+        "tags": [
+          "Диспетчер"
+        ],
+        "summary": "Export Incidents",
+        "description": "Последние 200 алертов текущей сессии с объяснением на момент выдачи.",
+        "operationId": "export_incidents_api_v1_incidents_export_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentExport"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demo/control": {
+      "post": {
+        "tags": [
+          "Демонстрация"
+        ],
+        "summary": "Control",
+        "operationId": "control_api_v1_demo_control_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoControl"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mode": {
+      "post": {
+        "tags": [
+          "Демонстрация"
+        ],
+        "summary": "Mode",
+        "description": "Переключение очищает старые координаты, расписание, прогнозы и алерты.",
+        "operationId": "mode_api_v1_mode_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModeControl"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/replay/load": {
+      "post": {
+        "tags": [
+          "Исторический replay"
+        ],
+        "summary": "Replay Load",
+        "description": "Загрузить validate или train из REPLAY_DATA_DIR; train только в режиме gps.\n\nИз train/schedule.csv используются только плановые поля. labels и\nфактические прибытия не становятся входами детектора или модели.\n\ntr_ids=null выбирает все ТС с планом и сообщениями в срезе с прогревом.\nЯвный список — ручной выбор до 128 ТС. Счётчики и будущие времена\nв replay.streams служат только диагностикой очереди проигрывателя.\n\nduration_minutes=null (по умолчанию) читает до последней доставки\nвыбранного архива: max(event_time, receive_time) для GPS, T для CSV.\nЯвное число ограничивает окно сверху. Пустой хвост не проигрывается.\nПо умолчанию начинает с паузы. Загрузка очищает текущий контекст только\nпосле успешной проверки CSV. Пути файлов через API не задаются.",
+        "operationId": "replay_load_api_v1_replay_load_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/generator/start": {
+      "post": {
+        "tags": [
+          "Сценарный генератор"
+        ],
+        "summary": "Generator Start",
+        "description": "Новая сессия отдельного HTTP producer; план синтетический, будущих фактов нет.\n\nПараметры воспроизводимы через seed. Сначала проверяется ответ producer,\nзатем заменяется контекст. URL задаётся только конфигурацией сервера.",
+        "operationId": "generator_start_api_v1_generator_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeneratorStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/generator/control": {
+      "post": {
+        "tags": [
+          "Сценарный генератор"
+        ],
+        "summary": "Generator Control",
+        "description": "Пауза/скорость меняют часы producer. Backend забирает все доступные кадры по cursor.",
+        "operationId": "generator_control_api_v1_generator_control_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeneratorControl"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/generator/logs": {
+      "get": {
+        "tags": [
+          "Сценарный генератор"
+        ],
+        "summary": "Generator Logs",
+        "description": "Последние 100 записей producer и счётчики приёма backend; это не объяснение ML.",
+        "operationId": "generator_logs_api_v1_generator_logs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/replay/control": {
+      "post": {
+        "tags": [
+          "Исторический replay"
+        ],
+        "summary": "Replay Control",
+        "operationId": "replay_control_api_v1_replay_control_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayControl"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live/context": {
+      "post": {
+        "tags": [
+          "Входные данные"
+        ],
+        "summary": "Context",
+        "description": "Заменяет live-контекст: соответствие unit/ТС, план и известные подсказки. Фактов будущих прибытий нет в контракте.",
+        "operationId": "context_api_v1_live_context_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveContext"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/context": {
+      "get": {
+        "tags": [
+          "Входные данные"
+        ],
+        "summary": "Context Export",
+        "description": "Текущие соответствия ТС/терминалов и план. Никаких фактических прибытий или hints.\n\nВозвращаемые даты не сдвигаются к текущему дню: исторический план нельзя\nавтоматически применять к сегодняшнему NDTP. POST live/context заменяет всё состояние.",
+        "operationId": "context_export_api_v1_context_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveContext"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/telemetry": {
+      "post": {
+        "tags": [
+          "Входные данные"
+        ],
+        "summary": "Telemetry",
+        "description": "HTTP-адаптер decoded CSV/других источников; при приёме received_at ставит сервер.",
+        "operationId": "telemetry_api_v1_telemetry_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/Telemetry"
+                },
+                "type": "array",
+                "maxItems": 500,
+                "minItems": 1,
+                "title": "Points"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/arrivals": {
+      "post": {
+        "tags": [
+          "Входные данные"
+        ],
+        "summary": "Arrival",
+        "description": "Факт остановки от отдельного источника. NDTP Nav00 такого события не даёт.\n\nBackend вычисляет cur_dev_s = arrived_at − scheduled_at. Повтор того же\nфакта идемпотентен, конфликт времени — 409; будущий факт/неизвестная ссылка — 422.\nОперационные факты поступают сюда отдельно. Экспериментальный внутренний\nGPS-детектор включается через arrival_mode=gps; подтверждённый операционный\nфакт может уточнить его оценку, сохраняя время доступности обеих версий.",
+        "operationId": "arrival_api_v1_arrivals_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArrivalInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vehicles/{tr_id}/forecast-trace": {
+      "get": {
+        "tags": [
+          "Диспетчер"
+        ],
+        "summary": "Forecast Trace",
+        "description": "Последний завершённый запрос/ответ инференса с происхождением current_delay.\n\nРезультат может быть историческим: issued_at и published_at нужно проверять.\nПри новом контексте очищается. Ответ не содержит будущих фактов прибытия.",
+        "operationId": "forecast_trace_api_v1_vehicles__tr_id__forecast_trace_get",
+        "parameters": [
+          {
+            "name": "tr_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tr Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastTrace"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ArrivalInput": {
+        "properties": {
+          "tr_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Tr Id"
+          },
+          "planned_stop_id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Planned Stop Id"
+          },
+          "arrived_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Arrived At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tr_id",
+          "planned_stop_id",
+          "arrived_at"
+        ],
+        "title": "ArrivalInput",
+        "description": "Одно подтверждённое прибытие; время получения назначает backend."
+      },
+      "CurrentDeviation": {
+        "properties": {
+          "delay_s": {
+            "type": "number",
+            "title": "Delay S"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "arrival",
+              "demo_arrival",
+              "generator_arrival",
+              "gps_estimate",
+              "door_estimate",
+              "external_hint",
+              "csv_snapshot",
+              "synthetic_hint"
+            ],
+            "title": "Source"
+          },
+          "sample_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Id"
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observed At"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At"
+          },
+          "planned_stop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Stop Id"
+          },
+          "stop_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Name"
+          },
+          "planned_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned At"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          },
+          "uncertainty_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty S",
+            "description": "Разрешение оценки по GPS, не калиброванный доверительный интервал"
+          },
+          "confirmation_span_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmation Span S"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "delay_s",
+          "source",
+          "observed_at",
+          "received_at"
+        ],
+        "title": "CurrentDeviation",
+        "description": "Наблюдение последнего известного отклонения, не прогноз будущей остановки."
+      },
+      "DashboardState": {
+        "properties": {
+          "server_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Server Time"
+          },
+          "clock_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Clock Time"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "demo",
+              "live",
+              "replay",
+              "generator"
+            ],
+            "title": "Mode"
+          },
+          "context": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Context"
+          },
+          "gps_arrivals": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Gps Arrivals"
+          },
+          "route_risks": {
+            "items": {
+              "$ref": "#/components/schemas/RouteRisk"
+            },
+            "type": "array",
+            "title": "Route Risks"
+          },
+          "section_risks": {
+            "items": {
+              "$ref": "#/components/schemas/SectionRisk"
+            },
+            "type": "array",
+            "title": "Section Risks"
+          },
+          "replay": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReplayState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generator": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GeneratorView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "demo": {
+            "$ref": "#/components/schemas/DemoState"
+          },
+          "health": {
+            "$ref": "#/components/schemas/HealthState"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/Summary"
+          },
+          "routes": {
+            "items": {
+              "$ref": "#/components/schemas/Route"
+            },
+            "type": "array",
+            "title": "Routes"
+          },
+          "vehicles": {
+            "items": {
+              "$ref": "#/components/schemas/VehicleView"
+            },
+            "type": "array",
+            "title": "Vehicles"
+          },
+          "incidents": {
+            "items": {
+              "$ref": "#/components/schemas/Incident"
+            },
+            "type": "array",
+            "title": "Incidents"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/Metrics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "server_time",
+          "clock_time",
+          "mode",
+          "demo",
+          "health",
+          "summary",
+          "routes",
+          "vehicles",
+          "incidents",
+          "metrics"
+        ],
+        "title": "DashboardState"
+      },
+      "DelayHint": {
+        "properties": {
+          "tr_id": {
+            "type": "integer",
+            "title": "Tr Id"
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observed At"
+          },
+          "delay_s": {
+            "type": "number",
+            "title": "Delay S"
+          },
+          "received_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received At"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "external_hint",
+              "csv_snapshot",
+              "synthetic_hint"
+            ],
+            "title": "Source",
+            "default": "external_hint"
+          },
+          "sample_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Id"
+          },
+          "target_stop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Stop Id"
+          },
+          "target_time_begin": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Time Begin"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tr_id",
+          "observed_at",
+          "delay_s"
+        ],
+        "title": "DelayHint"
+      },
+      "DelayObservation": {
+        "properties": {
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observed At"
+          },
+          "delay_s": {
+            "type": "number",
+            "title": "Delay S"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "observed_at",
+          "delay_s"
+        ],
+        "title": "DelayObservation",
+        "description": "Наблюдение известного тогда отклонения, строго предшествующее issued_at."
+      },
+      "DemoControl": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "pause",
+              "resume",
+              "reset",
+              "speed",
+              "source_off",
+              "source_on"
+            ],
+            "title": "Action"
+          },
+          "speed": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 30.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "DemoControl"
+      },
+      "DemoState": {
+        "properties": {
+          "running": {
+            "type": "boolean",
+            "title": "Running"
+          },
+          "source_enabled": {
+            "type": "boolean",
+            "title": "Source Enabled"
+          },
+          "speed": {
+            "type": "number",
+            "title": "Speed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "running",
+          "source_enabled",
+          "speed"
+        ],
+        "title": "DemoState"
+      },
+      "Explanation": {
+        "properties": {
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Evaluated At"
+          },
+          "cause_status": {
+            "type": "string",
+            "enum": [
+              "hypothesis",
+              "unknown"
+            ],
+            "title": "Cause Status"
+          },
+          "possible_cause": {
+            "type": "string",
+            "title": "Possible Cause"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/Observation"
+            },
+            "type": "array",
+            "title": "Observations"
+          },
+          "recommendation": {
+            "type": "string",
+            "title": "Recommendation"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "default": "Недостаточно наблюдений"
+          },
+          "observation_status": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "no_pattern",
+              "insufficient_data"
+            ],
+            "title": "Observation Status",
+            "default": "insufficient_data"
+          },
+          "rule_version": {
+            "type": "string",
+            "title": "Rule Version",
+            "default": "telemetry-rules-v2"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "evaluated_at",
+          "cause_status",
+          "possible_cause",
+          "observations",
+          "recommendation"
+        ],
+        "title": "Explanation"
+      },
+      "Features": {
+        "properties": {
+          "telemetry_age_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telemetry Age S"
+          },
+          "valid_points_5m": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Valid Points 5M",
+            "default": 0
+          },
+          "speed_mean_5m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 150.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed Mean 5M"
+          },
+          "stopped_share_5m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stopped Share 5M"
+          },
+          "distance_to_target_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance To Target M"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Features"
+      },
+      "ForecastExplanation": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "const": "exact_grouped_shapley_reference_v1",
+            "title": "Method"
+          },
+          "reference": {
+            "type": "string",
+            "title": "Reference"
+          },
+          "reference_prediction_s": {
+            "type": "number",
+            "title": "Reference Prediction S"
+          },
+          "current_delay_s": {
+            "type": "number",
+            "title": "Current Delay S"
+          },
+          "prediction_s": {
+            "type": "number",
+            "title": "Prediction S"
+          },
+          "model_adjustment_s": {
+            "type": "number",
+            "title": "Model Adjustment S"
+          },
+          "reconstructed_prediction_s": {
+            "type": "number",
+            "title": "Reconstructed Prediction S"
+          },
+          "reconstruction_error_s": {
+            "type": "number",
+            "title": "Reconstruction Error S"
+          },
+          "factors": {
+            "items": {
+              "$ref": "#/components/schemas/ForecastFactor"
+            },
+            "type": "array",
+            "title": "Factors"
+          },
+          "history_points": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "History Points",
+            "default": 1
+          },
+          "history_span_s": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "History Span S",
+            "default": 0
+          },
+          "neural_prior_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Neural Prior S"
+          },
+          "current_only_neural_prior_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Only Neural Prior S"
+          },
+          "history_effect_on_neural_prior_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History Effect On Neural Prior S"
+          },
+          "transformer_analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TransformerAnalysis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "interpretation": {
+            "type": "string",
+            "title": "Interpretation",
+            "default": "Вклады описывают чувствительность модели относительно опорного train-примера и не являются доказанными причинами задержки."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "method",
+          "reference",
+          "reference_prediction_s",
+          "current_delay_s",
+          "prediction_s",
+          "model_adjustment_s",
+          "reconstructed_prediction_s",
+          "reconstruction_error_s",
+          "factors"
+        ],
+        "title": "ForecastExplanation",
+        "description": "Проверяемое аддитивное разложение результата регрессии."
+      },
+      "ForecastFactor": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "current_state",
+              "forecast_horizon",
+              "route_position",
+              "remaining_path",
+              "plan_context",
+              "sequence_history"
+            ],
+            "title": "Code"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "effect_s": {
+            "type": "number",
+            "title": "Effect S"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "increases",
+              "decreases",
+              "neutral"
+            ],
+            "title": "Direction"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "title",
+          "effect_s",
+          "direction"
+        ],
+        "title": "ForecastFactor",
+        "description": "Локальный вклад группы признаков в численный прогноз.\n\nВклад объясняет поведение модели относительно зафиксированного опорного\nпримера. Он не устанавливает физическую причину задержки."
+      },
+      "ForecastTrace": {
+        "properties": {
+          "context_version": {
+            "type": "integer",
+            "title": "Context Version"
+          },
+          "execution": {
+            "type": "string",
+            "enum": [
+              "ml_http",
+              "backend_fallback"
+            ],
+            "title": "Execution"
+          },
+          "current_deviation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurrentDeviation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request": {
+            "$ref": "#/components/schemas/PredictionRequest"
+          },
+          "response": {
+            "$ref": "#/components/schemas/Prediction"
+          },
+          "telemetry_sequence": {
+            "type": "integer",
+            "title": "Telemetry Sequence"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "context_version",
+          "execution",
+          "current_deviation",
+          "request",
+          "response",
+          "telemetry_sequence",
+          "published_at"
+        ],
+        "title": "ForecastTrace",
+        "description": "Сохранённый реальный обмен backend ↔ ML, не реконструкция из нового состояния."
+      },
+      "GeneratorControl": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "pause",
+              "resume",
+              "speed"
+            ],
+            "title": "Action"
+          },
+          "speed": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 30.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "GeneratorControl"
+      },
+      "GeneratorStart": {
+        "properties": {
+          "scenario": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "slow_segment",
+              "long_stop",
+              "gps_loss"
+            ],
+            "title": "Scenario",
+            "default": "normal"
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 42
+          },
+          "speed": {
+            "type": "number",
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Speed",
+            "default": 10
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused",
+            "default": true
+          },
+          "route_count": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Route Count",
+            "default": 4
+          },
+          "telemetry_interval_s": {
+            "type": "integer",
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Telemetry Interval S",
+            "default": 15
+          },
+          "door_sensors": {
+            "type": "boolean",
+            "title": "Door Sensors",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "GeneratorStart"
+      },
+      "GeneratorView": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "scenario": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "slow_segment",
+              "long_stop",
+              "gps_loss"
+            ],
+            "title": "Scenario"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          },
+          "clock_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Clock Time"
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running"
+          },
+          "speed": {
+            "type": "number",
+            "title": "Speed"
+          },
+          "route_count": {
+            "type": "integer",
+            "title": "Route Count",
+            "default": 4
+          },
+          "telemetry_interval_s": {
+            "type": "integer",
+            "title": "Telemetry Interval S",
+            "default": 15
+          },
+          "door_sensors": {
+            "type": "boolean",
+            "title": "Door Sensors",
+            "default": false
+          },
+          "scenario_vehicle_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Vehicle Id"
+          },
+          "finished": {
+            "type": "boolean",
+            "title": "Finished",
+            "default": false
+          },
+          "connected": {
+            "type": "boolean",
+            "title": "Connected",
+            "default": true
+          },
+          "received_frames": {
+            "type": "integer",
+            "title": "Received Frames",
+            "default": 0
+          },
+          "emitted_frames": {
+            "type": "integer",
+            "title": "Emitted Frames",
+            "default": 0
+          },
+          "received_telemetry": {
+            "type": "integer",
+            "title": "Received Telemetry",
+            "default": 0
+          },
+          "emitted_telemetry": {
+            "type": "integer",
+            "title": "Emitted Telemetry",
+            "default": 0
+          },
+          "emitted_arrivals": {
+            "type": "integer",
+            "title": "Emitted Arrivals",
+            "default": 0
+          },
+          "gap": {
+            "type": "boolean",
+            "title": "Gap",
+            "default": false
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "logs": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Logs"
+          },
+          "transport": {
+            "type": "string",
+            "const": "HTTP decoded telemetry",
+            "title": "Transport",
+            "default": "HTTP decoded telemetry"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "session_id",
+          "scenario",
+          "seed",
+          "clock_time",
+          "running",
+          "speed"
+        ],
+        "title": "GeneratorView"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthState": {
+        "properties": {
+          "ml": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable",
+              "starting"
+            ],
+            "title": "Ml"
+          },
+          "ndtp_connections": {
+            "type": "integer",
+            "title": "Ndtp Connections"
+          },
+          "source_status": {
+            "type": "string",
+            "title": "Source Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ml",
+          "ndtp_connections",
+          "source_status"
+        ],
+        "title": "HealthState"
+      },
+      "Incident": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "tr_id": {
+            "type": "integer",
+            "title": "Tr Id"
+          },
+          "route_id": {
+            "type": "string",
+            "title": "Route Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "data_cutoff": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Data Cutoff",
+            "description": "Момент отсечения данных, по которым рассчитан прогноз"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At",
+            "description": "Время публикации по реальным часам сервера; created_at использует часы сценария в demo/replay"
+          },
+          "target_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Target Time"
+          },
+          "target_name": {
+            "type": "string",
+            "title": "Target Name"
+          },
+          "horizon_reference": {
+            "type": "string",
+            "const": "scheduled_arrival",
+            "title": "Horizon Reference",
+            "default": "scheduled_arrival"
+          },
+          "estimated_arrival_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Estimated Arrival At",
+            "description": "Плановое прибытие плюс прогноз задержки; это оценка, не факт"
+          },
+          "probability_late": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability Late"
+          },
+          "probability_status": {
+            "type": "string",
+            "enum": [
+              "validated",
+              "transferred",
+              "unavailable"
+            ],
+            "title": "Probability Status",
+            "default": "unavailable"
+          },
+          "probability_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability Note"
+          },
+          "risk": {
+            "type": "string",
+            "const": "red",
+            "title": "Risk"
+          },
+          "predicted_delay_s": {
+            "type": "number",
+            "title": "Predicted Delay S"
+          },
+          "lead_time_s": {
+            "type": "number",
+            "title": "Lead Time S"
+          },
+          "estimated_lead_time_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Lead Time S",
+            "description": "Оценённое прибытие минус время выдачи; не измеренный lead до факта"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "section": {
+            "type": "string",
+            "title": "Section"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "explanation": {
+            "$ref": "#/components/schemas/Explanation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "tr_id",
+          "route_id",
+          "created_at",
+          "data_cutoff",
+          "published_at",
+          "target_time",
+          "target_name",
+          "estimated_arrival_at",
+          "risk",
+          "predicted_delay_s",
+          "lead_time_s",
+          "reason",
+          "section",
+          "model_version",
+          "method",
+          "explanation"
+        ],
+        "title": "Incident"
+      },
+      "IncidentExport": {
+        "properties": {
+          "exported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Exported At"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "demo",
+              "live",
+              "replay",
+              "generator"
+            ],
+            "title": "Mode"
+          },
+          "horizon_reference": {
+            "type": "string",
+            "const": "scheduled_arrival",
+            "title": "Horizon Reference",
+            "default": "scheduled_arrival"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "incidents": {
+            "items": {
+              "$ref": "#/components/schemas/Incident"
+            },
+            "type": "array",
+            "title": "Incidents"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "exported_at",
+          "mode",
+          "note",
+          "incidents"
+        ],
+        "title": "IncidentExport"
+      },
+      "LiveContext": {
+        "properties": {
+          "plan_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Version"
+          },
+          "plan_timezone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Timezone"
+          },
+          "plan_complete": {
+            "type": "boolean",
+            "title": "Plan Complete",
+            "description": "Передан весь доступный исходный план выбранных ТС, без обрезки по окну replay",
+            "default": false
+          },
+          "arrival_mode": {
+            "type": "string",
+            "enum": [
+              "gps",
+              "external"
+            ],
+            "title": "Arrival Mode",
+            "description": "gps — экспериментальная оценка, не проверенный операционный источник; generator включает её отдельно",
+            "default": "external"
+          },
+          "vehicles": {
+            "items": {
+              "$ref": "#/components/schemas/VehicleConfig"
+            },
+            "type": "array",
+            "maxItems": 128,
+            "minItems": 1,
+            "title": "Vehicles"
+          },
+          "routes": {
+            "items": {
+              "$ref": "#/components/schemas/Route"
+            },
+            "type": "array",
+            "maxItems": 128,
+            "title": "Routes"
+          },
+          "schedule": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduledStop"
+            },
+            "type": "array",
+            "maxItems": 20000,
+            "title": "Schedule"
+          },
+          "hints": {
+            "items": {
+              "$ref": "#/components/schemas/DelayHint"
+            },
+            "type": "array",
+            "maxItems": 10000,
+            "title": "Hints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "vehicles"
+        ],
+        "title": "LiveContext"
+      },
+      "Metrics": {
+        "properties": {
+          "received": {
+            "type": "integer",
+            "title": "Received"
+          },
+          "duplicates": {
+            "type": "integer",
+            "title": "Duplicates"
+          },
+          "invalid": {
+            "type": "integer",
+            "title": "Invalid"
+          },
+          "ndtp_errors": {
+            "type": "integer",
+            "title": "Ndtp Errors"
+          },
+          "unknown_units": {
+            "type": "integer",
+            "title": "Unknown Units"
+          },
+          "ml_failures": {
+            "type": "integer",
+            "title": "Ml Failures"
+          },
+          "learning_store_failures": {
+            "type": "integer",
+            "title": "Learning Store Failures"
+          },
+          "inference_p95_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inference P95 Ms"
+          },
+          "pipeline_p95_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pipeline P95 Ms"
+          },
+          "pipeline_cycles": {
+            "type": "integer",
+            "title": "Pipeline Cycles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "received",
+          "duplicates",
+          "invalid",
+          "ndtp_errors",
+          "unknown_units",
+          "ml_failures",
+          "learning_store_failures",
+          "inference_p95_ms",
+          "pipeline_p95_ms",
+          "pipeline_cycles"
+        ],
+        "title": "Metrics"
+      },
+      "ModeControl": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "demo",
+              "live"
+            ],
+            "title": "Mode"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "title": "ModeControl"
+      },
+      "ModelPlanContext": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Version"
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Timezone"
+          },
+          "complete": {
+            "type": "boolean",
+            "title": "Complete"
+          },
+          "stops": {
+            "items": {
+              "$ref": "#/components/schemas/StopTarget"
+            },
+            "type": "array",
+            "maxItems": 20000,
+            "minItems": 1,
+            "title": "Stops"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version",
+          "timezone",
+          "complete",
+          "stops"
+        ],
+        "title": "ModelPlanContext",
+        "description": "Полный разрешённый план одного ТС для frozen plan-context builder.\n\nВсе строки — план, включая будущие плановые посещения, без фактов прибытия.\ncomplete подтверждает полноту исходного плана, а не наличие GPS для всех остановок."
+      },
+      "Observation": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "evidence": {
+            "type": "string",
+            "title": "Evidence"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "movement",
+              "data_quality",
+              "schedule"
+            ],
+            "title": "Kind"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "title",
+          "evidence",
+          "kind"
+        ],
+        "title": "Observation"
+      },
+      "Prediction": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "tr_id": {
+            "type": "integer",
+            "title": "Tr Id"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Issued At"
+          },
+          "target": {
+            "$ref": "#/components/schemas/StopTarget"
+          },
+          "predicted_delay_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Delay S"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "persistence",
+              "fallback",
+              "unavailable",
+              "learned"
+            ],
+            "title": "Method"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "green",
+              "amber",
+              "red",
+              "unknown"
+            ],
+            "title": "Risk"
+          },
+          "probability_late": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability Late"
+          },
+          "probability_status": {
+            "type": "string",
+            "enum": [
+              "validated",
+              "transferred",
+              "unavailable"
+            ],
+            "title": "Probability Status",
+            "description": "validated — внутри проверенной области; transferred — приближённый перенос на смешанный train; unavailable — оценки нет",
+            "default": "unavailable"
+          },
+          "probability_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability Note"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "forecast_explanation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ForecastExplanation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "tr_id",
+          "issued_at",
+          "target",
+          "predicted_delay_s",
+          "model_version",
+          "method",
+          "risk",
+          "reasons"
+        ],
+        "title": "Prediction"
+      },
+      "PredictionAvailability": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "source_unavailable",
+              "no_target",
+              "telemetry_missing",
+              "telemetry_stale",
+              "deviation_expired",
+              "deviation_missing",
+              "target_reached",
+              "prediction_pending",
+              "model_input_unavailable"
+            ],
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Причина доступности прогноза на текущий момент; не физическая причина задержки"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "PredictionAvailability"
+      },
+      "PredictionRequest": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Request Id"
+          },
+          "tr_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Tr Id"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Issued At"
+          },
+          "target": {
+            "$ref": "#/components/schemas/StopTarget"
+          },
+          "current_delay_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Delay S"
+          },
+          "current_delay_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "arrival",
+                  "demo_arrival",
+                  "generator_arrival",
+                  "gps_estimate",
+                  "door_estimate",
+                  "external_hint",
+                  "csv_snapshot",
+                  "synthetic_hint"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Delay Source"
+          },
+          "current_delay_detector_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Delay Detector Version"
+          },
+          "current_delay_detector_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Delay Detector Sha256"
+          },
+          "telemetry_domain": {
+            "type": "string",
+            "enum": [
+              "historical_real",
+              "historical_mixed",
+              "live_unverified",
+              "synthetic",
+              "unknown"
+            ],
+            "title": "Telemetry Domain",
+            "description": "Происхождение входов, выставленное backend; область проверки вероятности не переносится на синтетику автоматически",
+            "default": "unknown"
+          },
+          "features": {
+            "$ref": "#/components/schemas/Features"
+          },
+          "plan_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelPlanContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "delay_history": {
+            "items": {
+              "$ref": "#/components/schemas/DelayObservation"
+            },
+            "type": "array",
+            "maxItems": 11,
+            "title": "Delay History",
+            "description": "До 11 причинно доступных наблюдений перед issued_at; текущий cur_dev_s добавляет ML-модуль."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "tr_id",
+          "issued_at",
+          "target"
+        ],
+        "title": "PredictionRequest"
+      },
+      "ReplayConfig": {
+        "properties": {
+          "dataset_split": {
+            "type": "string",
+            "enum": [
+              "validate",
+              "train"
+            ],
+            "title": "Dataset Split",
+            "default": "validate"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start",
+            "default": "2026-01-06T11:30:00Z"
+          },
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Minutes",
+            "description": "null: до последнего доступного события архива; число: верхняя граница окна для короткой проверки"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "default": "UTC"
+          },
+          "tr_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array",
+                "maxItems": 128,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tr Ids",
+            "description": "null: все ТС с планом и сообщениями в срезе с предысторией; список: ручной выбор"
+          },
+          "speed": {
+            "type": "number",
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Speed",
+            "default": 10
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused",
+            "default": true
+          },
+          "deviation_source": {
+            "type": "string",
+            "enum": [
+              "csv_snapshot",
+              "gps"
+            ],
+            "title": "Deviation Source",
+            "default": "csv_snapshot"
+          },
+          "warmup_minutes": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 0.0,
+            "title": "Warmup Minutes",
+            "description": "Сколько доступной истории перед start доставить для прогрева; будущие события остаются в очереди",
+            "default": 5
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ReplayConfig"
+      },
+      "ReplayControl": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "pause",
+              "resume",
+              "reset",
+              "speed"
+            ],
+            "title": "Action"
+          },
+          "speed": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 30.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "ReplayControl"
+      },
+      "ReplayState": {
+        "properties": {
+          "dataset_split": {
+            "type": "string",
+            "enum": [
+              "validate",
+              "train"
+            ],
+            "title": "Dataset Split"
+          },
+          "plan_file": {
+            "type": "string",
+            "title": "Plan File"
+          },
+          "points_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points File"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          },
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Minutes"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running"
+          },
+          "finished": {
+            "type": "boolean",
+            "title": "Finished"
+          },
+          "speed": {
+            "type": "number",
+            "title": "Speed"
+          },
+          "tr_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Tr Ids"
+          },
+          "selection_mode": {
+            "type": "string",
+            "enum": [
+              "all_available",
+              "manual"
+            ],
+            "title": "Selection Mode"
+          },
+          "fleet": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Fleet"
+          },
+          "streams": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Streams",
+            "description": "Диагностика архива для проигрывателя, не онлайн-признаки модели"
+          },
+          "deviation_source": {
+            "type": "string",
+            "enum": [
+              "csv_snapshot",
+              "gps"
+            ],
+            "title": "Deviation Source"
+          },
+          "warmup_minutes": {
+            "type": "integer",
+            "title": "Warmup Minutes"
+          },
+          "delivered": {
+            "type": "integer",
+            "title": "Delivered"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "sources_sha256": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Sources Sha256"
+          },
+          "quality": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Quality"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dataset_split",
+          "plan_file",
+          "points_file",
+          "start",
+          "end",
+          "duration_minutes",
+          "timezone",
+          "running",
+          "finished",
+          "speed",
+          "tr_ids",
+          "selection_mode",
+          "fleet",
+          "streams",
+          "deviation_source",
+          "warmup_minutes",
+          "delivered",
+          "total",
+          "sources_sha256",
+          "quality",
+          "note"
+        ],
+        "title": "ReplayState"
+      },
+      "Route": {
+        "properties": {
+          "route_id": {
+            "type": "string",
+            "title": "Route Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Color"
+          },
+          "path": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "maxItems": 10000,
+            "minItems": 2,
+            "title": "Path"
+          },
+          "stops": {
+            "items": {
+              "$ref": "#/components/schemas/RouteStop"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Stops"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "route_id",
+          "name",
+          "color",
+          "path"
+        ],
+        "title": "Route"
+      },
+      "RouteRisk": {
+        "properties": {
+          "risk": {
+            "type": "string",
+            "enum": [
+              "green",
+              "amber",
+              "red",
+              "unknown"
+            ],
+            "title": "Risk"
+          },
+          "vehicles": {
+            "type": "integer",
+            "title": "Vehicles"
+          },
+          "evaluated": {
+            "type": "integer",
+            "title": "Evaluated"
+          },
+          "red": {
+            "type": "integer",
+            "title": "Red"
+          },
+          "amber": {
+            "type": "integer",
+            "title": "Amber"
+          },
+          "unknown": {
+            "type": "integer",
+            "title": "Unknown"
+          },
+          "max_predicted_delay_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Predicted Delay S"
+          },
+          "tr_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Tr Ids"
+          },
+          "route_id": {
+            "type": "string",
+            "title": "Route Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "risk",
+          "vehicles",
+          "evaluated",
+          "red",
+          "amber",
+          "unknown",
+          "max_predicted_delay_s",
+          "tr_ids",
+          "route_id",
+          "name"
+        ],
+        "title": "RouteRisk"
+      },
+      "RouteStop": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "lat",
+          "lon"
+        ],
+        "title": "RouteStop"
+      },
+      "ScheduledStop": {
+        "properties": {
+          "tr_id": {
+            "type": "integer",
+            "title": "Tr Id"
+          },
+          "target": {
+            "$ref": "#/components/schemas/StopTarget"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tr_id",
+          "target"
+        ],
+        "title": "ScheduledStop"
+      },
+      "SectionRisk": {
+        "properties": {
+          "risk": {
+            "type": "string",
+            "enum": [
+              "green",
+              "amber",
+              "red",
+              "unknown"
+            ],
+            "title": "Risk"
+          },
+          "vehicles": {
+            "type": "integer",
+            "title": "Vehicles"
+          },
+          "evaluated": {
+            "type": "integer",
+            "title": "Evaluated"
+          },
+          "red": {
+            "type": "integer",
+            "title": "Red"
+          },
+          "amber": {
+            "type": "integer",
+            "title": "Amber"
+          },
+          "unknown": {
+            "type": "integer",
+            "title": "Unknown"
+          },
+          "max_predicted_delay_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Predicted Delay S"
+          },
+          "tr_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Tr Ids"
+          },
+          "route_id": {
+            "type": "string",
+            "title": "Route Id"
+          },
+          "section": {
+            "type": "string",
+            "title": "Section"
+          },
+          "path": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Path"
+          },
+          "interpretation": {
+            "type": "string",
+            "title": "Interpretation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "risk",
+          "vehicles",
+          "evaluated",
+          "red",
+          "amber",
+          "unknown",
+          "max_predicted_delay_s",
+          "tr_ids",
+          "route_id",
+          "section",
+          "path",
+          "interpretation"
+        ],
+        "title": "SectionRisk"
+      },
+      "SegmentObservation": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "const": "planned_chord",
+            "title": "Method",
+            "default": "planned_chord"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unknown"
+            ],
+            "title": "Status",
+            "default": "unknown"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Evaluated At"
+          },
+          "from_stop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Stop Id"
+          },
+          "from_stop_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Stop Name"
+          },
+          "to_stop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Stop Id"
+          },
+          "to_stop_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Stop Name"
+          },
+          "anchor_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Source"
+          },
+          "speed_mean_kmh": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 130.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed Mean Kmh"
+          },
+          "selected_points": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Selected Points",
+            "default": 0
+          },
+          "considered_points": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Considered Points",
+            "default": 0
+          },
+          "coverage_fraction": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Fraction"
+          },
+          "coverage_basis": {
+            "type": "string",
+            "const": "available_unique_timestamps",
+            "title": "Coverage Basis",
+            "default": "available_unique_timestamps"
+          },
+          "observed_span_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed Span S"
+          },
+          "current_idle_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Idle S"
+          },
+          "idle_points": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Idle Points",
+            "default": 0
+          },
+          "idle_duration_kind": {
+            "type": "string",
+            "const": "observed_span_lower_bound",
+            "title": "Idle Duration Kind",
+            "default": "observed_span_lower_bound"
+          },
+          "latest_event_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Event At"
+          },
+          "window_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Start"
+          },
+          "chord_length_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chord Length M"
+          },
+          "corridor_width_m": {
+            "type": "number",
+            "title": "Corridor Width M",
+            "default": 50.0
+          },
+          "rule_version": {
+            "type": "string",
+            "title": "Rule Version",
+            "default": "planned-chord-observations-v1"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason",
+          "evaluated_at"
+        ],
+        "title": "SegmentObservation"
+      },
+      "StopTarget": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "scheduled_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled At"
+          },
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon"
+          },
+          "manual_fill": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Fill",
+            "description": "Плановое поле; null означает неизвестное, а не false"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "scheduled_at",
+          "lat",
+          "lon"
+        ],
+        "title": "StopTarget"
+      },
+      "Summary": {
+        "properties": {
+          "vehicles": {
+            "type": "integer",
+            "title": "Vehicles"
+          },
+          "red": {
+            "type": "integer",
+            "title": "Red"
+          },
+          "amber": {
+            "type": "integer",
+            "title": "Amber"
+          },
+          "stale": {
+            "type": "integer",
+            "title": "Stale"
+          },
+          "unknown": {
+            "type": "integer",
+            "title": "Unknown"
+          },
+          "events": {
+            "type": "integer",
+            "title": "Events"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "vehicles",
+          "red",
+          "amber",
+          "stale",
+          "unknown",
+          "events"
+        ],
+        "title": "Summary"
+      },
+      "Telemetry": {
+        "properties": {
+          "tr_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Tr Id"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "event_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Event Time"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At"
+          },
+          "lat": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lon": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 180.0,
+                "minimum": -180.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lon"
+          },
+          "speed_kmh": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 400.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed Kmh"
+          },
+          "heading": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 360.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heading"
+          },
+          "location_valid": {
+            "type": "boolean",
+            "title": "Location Valid",
+            "default": true
+          },
+          "doors_open": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doors Open",
+            "description": "Есть открытая дверь по присутствующим датчикам; null — датчик/состояние неизвестны. Не готовое событие прибытия."
+          },
+          "door_sensor_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Door Sensor Key",
+            "description": "Идентификатор набора присутствующих датчиков. Переход closed→open используется только при одинаковом известном наборе."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "demo",
+              "ndtp",
+              "replay",
+              "http",
+              "generator"
+            ],
+            "title": "Source",
+            "default": "http"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tr_id",
+          "event_time",
+          "received_at"
+        ],
+        "title": "Telemetry"
+      },
+      "TransformerAnalysis": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "const": "leave_one_history_observation_out_v1",
+            "title": "Method"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "delay_trend_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delay Trend S"
+          },
+          "recent_change_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Change S"
+          },
+          "step_volatility_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Volatility S"
+          },
+          "influential_history": {
+            "items": {
+              "$ref": "#/components/schemas/TransformerHistoryImpact"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Influential History"
+          },
+          "interpretation": {
+            "type": "string",
+            "title": "Interpretation",
+            "default": "Это чувствительность Transformer к истории cur_dev_s, а не доказательство пробки, ДТП, посадки или другой физической причины."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "method",
+          "summary"
+        ],
+        "title": "TransformerAnalysis",
+        "description": "Анализ временного сигнала Transformer, без заявления о физической причине."
+      },
+      "TransformerHistoryImpact": {
+        "properties": {
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observed At"
+          },
+          "delay_s": {
+            "type": "number",
+            "title": "Delay S"
+          },
+          "age_s": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Age S"
+          },
+          "prior_effect_s": {
+            "type": "number",
+            "title": "Prior Effect S"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "increases",
+              "decreases",
+              "neutral"
+            ],
+            "title": "Direction"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "observed_at",
+          "delay_s",
+          "age_s",
+          "prior_effect_s",
+          "direction"
+        ],
+        "title": "TransformerHistoryImpact",
+        "description": "Counterfactual-вклад одного прошлого наблюдения во внутренний prior."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VehicleConfig": {
+        "properties": {
+          "tr_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Tr Id"
+          },
+          "unit_id": {
+            "type": "integer",
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Unit Id"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "route_id": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Route Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tr_id",
+          "unit_id",
+          "label",
+          "route_id"
+        ],
+        "title": "VehicleConfig"
+      },
+      "VehicleView": {
+        "properties": {
+          "tr_id": {
+            "type": "integer",
+            "title": "Tr Id"
+          },
+          "unit_id": {
+            "type": "integer",
+            "title": "Unit Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "route_id": {
+            "type": "string",
+            "title": "Route Id"
+          },
+          "lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lon"
+          },
+          "speed_kmh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed Kmh"
+          },
+          "heading": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 360.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heading",
+            "description": "Курс в градусах от севера по часовой стрелке из того же пригодного GPS, что lat/lon; null — не передан"
+          },
+          "doors_open": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doors Open"
+          },
+          "event_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Time"
+          },
+          "age_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age S"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "no_data"
+            ],
+            "title": "Status"
+          },
+          "cur_dev_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cur Dev S"
+          },
+          "current_deviation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurrentDeviation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gps_detector": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gps Detector"
+          },
+          "prediction_current_delay_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prediction Current Delay S"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StopTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prediction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Prediction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prediction_availability": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PredictionAvailability"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "telemetry_sequence": {
+            "type": "integer",
+            "title": "Telemetry Sequence",
+            "description": "Число принятых недублирующихся сообщений ТС в текущем контексте"
+          },
+          "prediction_input_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prediction Input Sequence",
+            "description": "Граница входа при расчёте опубликованного прогноза; не число валидных GPS и не признак модели"
+          },
+          "prediction_published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prediction Published At",
+            "description": "Реальное серверное время публикации; issued_at — время отсечения признаков"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "recommendation": {
+            "type": "string",
+            "title": "Recommendation"
+          },
+          "section": {
+            "type": "string",
+            "title": "Section"
+          },
+          "explanation": {
+            "$ref": "#/components/schemas/Explanation"
+          },
+          "segment_observation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SegmentObservation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tr_id",
+          "unit_id",
+          "label",
+          "route_id",
+          "lat",
+          "lon",
+          "speed_kmh",
+          "event_time",
+          "age_s",
+          "status",
+          "cur_dev_s",
+          "current_deviation",
+          "prediction_current_delay_s",
+          "target",
+          "prediction",
+          "telemetry_sequence",
+          "prediction_input_sequence",
+          "prediction_published_at",
+          "reasons",
+          "recommendation",
+          "section",
+          "explanation"
+        ],
+        "title": "VehicleView"
+      }
+    }
+  }
+}

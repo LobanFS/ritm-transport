@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: training.refit_hgbr</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="training.html" class="white">training</a>.refit_hgbr</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="https://github.com/LobanFS/ritm-transport/blob/main/training/refit_hgbr.py">training/refit_hgbr.py</a></td></tr></table>
+    <p><span class="code">Build&nbsp;a&nbsp;reviewable&nbsp;HGBR&nbsp;candidate&nbsp;while&nbsp;keeping&nbsp;Transformer&nbsp;weights&nbsp;frozen.</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn">argparse<br>
+joblib<br>
+</td><td class="multicolumn">json<br>
+numpy<br>
+</td><td class="multicolumn">pandas<br>
+shutil<br>
+</td><td class="multicolumn">sys<br>
+</td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-main"><strong>main</strong></a>() -&gt; 'None'</dt></dl>
+ <dl><dt><a name="-official_matrix"><strong>official_matrix</strong></a>(dataset: 'Path', sequences: 'Path', transformer)</dt></dl>
+ <dl><dt><a name="-production_matrix"><strong>production_matrix</strong></a>(model: 'LearnedModel', examples)</dt></dl>
+ <dl><dt><a name="-refit"><strong>refit</strong></a>(*, model_path: 'Path', encoder_path: 'Path', production_path: 'Path', dataset: 'Path', sequences: 'Path', output: 'Path', model_version: 'str', manifest_path: 'Path | None' = None, minimum_new_targets: 'int' = 200, validation_fraction: 'float' = 0.2, maximum_mae_regression_s: 'float' = 0.0) -&gt; 'dict'</dt></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>FEATURE_NAMES</strong> = ('cur_dev_s', 'horizon_min', 'cur_x_horizon', 'cur_abs_s', 'cur_sign', 'target_rel_pos', 'state_rel_pos', 'stops_ahead', 'stops_ahead_log', 'plan_interval_s', 'route_len', 'plan_manual_target', 'plan_manual_rate', 'neural_prior')<br>
+<strong>PLAN_FEATURES</strong> = ('cur_dev_s', 'horizon_min', 'cur_x_horizon', 'cur_abs_s', 'cur_sign', 'target_rel_pos', 'state_rel_pos', 'stops_ahead', 'stops_ahead_log', 'plan_interval_s', 'route_len', 'plan_manual_target', 'plan_manual_rate')<br>
+<strong>ROOT</strong> = PosixPath('.')<br>
+<strong>SCHEMA_VERSION</strong> = 'hybrid-runtime-bundle-v2'</td></tr></table>
+</body></html>
