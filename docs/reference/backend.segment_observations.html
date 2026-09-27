@@ -30,14 +30,14 @@
 <table class="section">
 <tr class="decor pkg-content-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
-    
+
 <tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><table><tr><td class="multicolumn">math<br>
 </td><td class="multicolumn"></td><td class="multicolumn"></td><td class="multicolumn"></td></tr></table></td></tr></table><p>
 <table class="section">
 <tr class="decor index-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Classes</strong></td></tr>
-    
+
 <tr><td class="decor index-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><dl>
 <dt class="heading-text"><a href="common.contracts.html#Contract">common.contracts.Contract</a>(pydantic.main.BaseModel)
@@ -51,7 +51,7 @@
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="SegmentObservation">class <strong>SegmentObservation</strong></a>(<a href="common.contracts.html#Contract">common.contracts.Contract</a>)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#SegmentObservation">SegmentObservation</a>(*,&nbsp;method:&nbsp;Literal['planned_chord']&nbsp;=&nbsp;'planned_chord',&nbsp;status:&nbsp;Literal['available',&nbsp;'unknown']&nbsp;=&nbsp;'unknown',&nbsp;reason:&nbsp;str,&nbsp;evaluated_at:&nbsp;pydantic.types.AwareDatetime,&nbsp;from_stop_id:&nbsp;str&nbsp;|&nbsp;None&nbsp;=&nbsp;None,&nbsp;from_stop_name:&nbsp;str&nbsp;|&nbsp;None&nbsp;=&nbsp;None,&nbsp;to_stop_id:&nbsp;str&nbsp;|&nbsp;None&nbsp;=&nbsp;None,&nbsp;to_stop_name:&nbsp;str&nbsp;|&nbsp;None&nbsp;=&nbsp;None,&nbsp;anchor_source:&nbsp;str&nbsp;|&nbsp;None&nbsp;=&nbsp;None,&nbsp;speed_mean_kmh:&nbsp;Annotated[float&nbsp;|&nbsp;None,&nbsp;Ge(ge=0),&nbsp;Le(le=130)]&nbsp;=&nbsp;None,&nbsp;selected_points:&nbsp;Annotated[int,&nbsp;Ge(ge=0)]&nbsp;=&nbsp;0,&nbsp;considered_points:&nbsp;Annotated[int,&nbsp;Ge(ge=0)]&nbsp;=&nbsp;0,&nbsp;coverage_fraction:&nbsp;Annotated[float&nbsp;|&nbsp;None,&nbsp;Ge(ge=0),&nbsp;Le(le=1)]&nbsp;=&nbsp;None,&nbsp;coverage_basis:&nbsp;Literal['available_unique_timestamps']&nbsp;=&nbsp;'available_unique_timestamps',&nbsp;observed_span_s:&nbsp;Annotated[float&nbsp;|&nbsp;None,&nbsp;Ge(ge=0)]&nbsp;=&nbsp;None,&nbsp;current_idle_s:&nbsp;Annotated[float&nbsp;|&nbsp;None,&nbsp;Ge(ge=0)]&nbsp;=&nbsp;None,&nbsp;idle_points:&nbsp;Annotated[int,&nbsp;Ge(ge=0)]&nbsp;=&nbsp;0,&nbsp;idle_duration_kind:&nbsp;Literal['observed_span_lower_bound']&nbsp;=&nbsp;'observed_span_lower_bound',&nbsp;latest_event_at:&nbsp;pydantic.types.AwareDatetime&nbsp;|&nbsp;None&nbsp;=&nbsp;None,&nbsp;window_start:&nbsp;pydantic.types.AwareDatetime&nbsp;|&nbsp;None&nbsp;=&nbsp;None,&nbsp;chord_length_m:&nbsp;Annotated[float&nbsp;|&nbsp;None,&nbsp;Ge(ge=0)]&nbsp;=&nbsp;None,&nbsp;corridor_width_m:&nbsp;float&nbsp;=&nbsp;50.0,&nbsp;rule_version:&nbsp;str&nbsp;=&nbsp;'planned-chord-observations-v1')&nbsp;-&amp;gt;&nbsp;None<br>
 &nbsp;<br>
@@ -77,7 +77,7 @@ Data and other attributes defined here:<br>
 
 <dl><dt><strong>__pydantic_computed_fields__</strong> = {}</dl>
 
-<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'backend.segment_observations.SegmentObservation'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'SegmentObservation'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_sche...ackend.segment_observations.SegmentObservation'&gt;&gt;]}, 'ref': 'backend.segment_observations.SegmentObservation:37245507600', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'anchor_source': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, 'chord_length_m': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, 'considered_points': {'metadata': {}, 'schema': {'default': 0, 'schema': {'ge': 0, 'type': 'int'}, 'type': 'default'}, 'type': 'model-field'}, 'corridor_width_m': {'metadata': {}, 'schema': {'default': 50.0, 'schema': {'type': 'float'}, 'type': 'default'}, 'type': 'model-field'}, 'coverage_basis': {'metadata': {}, 'schema': {'default': 'available_unique_timestamps', 'schema': {'expected': [...], 'type': 'literal'}, 'type': 'default'}, 'type': 'model-field'}, 'coverage_fraction': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, 'current_idle_s': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, 'evaluated_at': {'metadata': {}, 'schema': {'microseconds_precision': 'truncate', 'type': 'datetime', 'tz_constraint': 'aware'}, 'type': 'model-field'}, 'from_stop_id': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, 'from_stop_name': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, ...}, 'model_name': 'SegmentObservation', 'type': 'model-fields'}, 'type': 'model'}</dl>
+<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'backend.segment_observations.SegmentObservation'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'SegmentObservation'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_sche...ackend.segment_observations.SegmentObservation'&gt;&gt;]}, 'ref': 'backend.segment_observations.SegmentObservation:53352309776', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'anchor_source': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, 'chord_length_m': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, 'considered_points': {'metadata': {}, 'schema': {'default': 0, 'schema': {'ge': 0, 'type': 'int'}, 'type': 'default'}, 'type': 'model-field'}, 'corridor_width_m': {'metadata': {}, 'schema': {'default': 50.0, 'schema': {'type': 'float'}, 'type': 'default'}, 'type': 'model-field'}, 'coverage_basis': {'metadata': {}, 'schema': {'default': 'available_unique_timestamps', 'schema': {'expected': [...], 'type': 'literal'}, 'type': 'default'}, 'type': 'model-field'}, 'coverage_fraction': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, 'current_idle_s': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, 'evaluated_at': {'metadata': {}, 'schema': {'microseconds_precision': 'truncate', 'type': 'datetime', 'tz_constraint': 'aware'}, 'type': 'model-field'}, 'from_stop_id': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, 'from_stop_name': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, ...}, 'model_name': 'SegmentObservation', 'type': 'model-fields'}, 'type': 'model'}</dl>
 
 <dl><dt><strong>__pydantic_custom_init__</strong> = False</dl>
 
@@ -499,7 +499,7 @@ Data and other attributes inherited from pydantic.main.BaseModel:<br>
 <table class="section">
 <tr class="decor functions-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
-    
+
 <tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><dl><dt><a name="-observe_segment"><strong>observe_segment</strong></a>(history: 'Iterable[Telemetry]', at: 'datetime', schedule: 'Sequence[StopTarget]', current_deviation: 'CurrentDeviation | None') -&gt; 'SegmentObservation'</dt><dd><span class="code">Наблюдать&nbsp;активный&nbsp;плановый&nbsp;перегон&nbsp;на&nbsp;доступных&nbsp;к&nbsp;``at``&nbsp;сообщениях.<br>
 &nbsp;<br>
@@ -511,7 +511,7 @@ Data and other attributes inherited from pydantic.main.BaseModel:<br>
 <table class="section">
 <tr class="decor data-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
-    
+
 <tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><strong>Literal</strong> = typing.Literal</td></tr></table>
 </body></html>

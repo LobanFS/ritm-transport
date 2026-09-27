@@ -62,7 +62,8 @@ def create_app(*, start_background: bool = True, enable_ndtp: bool = True, ml_ur
             app.state.custom_dataset = None
             custom_storage = tempfile.TemporaryDirectory(prefix='ritm-custom-')
             app.state.custom_storage = Path(custom_storage.name)
-            listener = NDTPServer(engine.on_nav, engine.ndtp_error, host=os.getenv("NDTP_HOST", "127.0.0.1"), port=int(os.getenv("NDTP_PORT", "9201")))
+            listener = NDTPServer(engine.on_nav, engine.ndtp_error, host=os.getenv("NDTP_HOST", "127.0.0.1"), port=int(os.getenv("NDTP_PORT", "9201")),
+                                  max_connections=int(os.getenv("NDTP_MAX_CONNECTIONS", "0")))
             if enable_ndtp:
                 await listener.start()
             async def loop():
@@ -167,7 +168,7 @@ def create_app(*, start_background: bool = True, enable_ndtp: bool = True, ml_ur
         фактические прибытия не становятся входами детектора или модели.
 
         tr_ids=null выбирает все ТС с планом и сообщениями в срезе с прогревом.
-        Явный список — ручной выбор до 128 ТС. Счётчики и будущие времена
+        Явный список — ручной выбор ТС. Счётчики и будущие времена
         в replay.streams служат только диагностикой очереди проигрывателя.
 
         duration_minutes=null (по умолчанию) читает до последней доставки
@@ -196,7 +197,10 @@ def create_app(*, start_background: bool = True, enable_ndtp: bool = True, ml_ur
             e = request.app.state.engine
             version = e.version
             try:
-                replay = await asyncio.to_thread(load_replay, Path(root), config)
+                replay = await asyncio.wait_for(asyncio.to_thread(load_replay, Path(root), config),
+                                                timeout=CUSTOM_IMPORT_SECONDS)
+            except TimeoutError as exc:
+                raise HTTPException(408, 'Загрузка архива превысила бюджет времени; текущий поток сохранён. Увеличьте RITM_IMPORT_TIMEOUT_SECONDS') from exc
             except (OSError, ValueError, KeyError, TypeError, OverflowError, csv.Error) as exc:
                 log.warning('Replay load failed: %s', type(exc).__name__)
                 raise HTTPException(422, 'Не удалось загрузить срез: проверьте CSV, ТС, окно и логи backend') from exc
@@ -222,8 +226,9 @@ def create_app(*, start_background: bool = True, enable_ndtp: bool = True, ml_ur
     async def replay_import(request: Request):
         """Проверить CSV и активировать custom на паузе, с GPS и началом по данным.
 
-        Весь JSON ограничен 80 MiB; приём и обработка — по 30 секунд.
-        Максимум 500000 строк traffic+points, 20000 строк плана, 128 ТС.
+        Число ТС, событий и посещений не ограничено продуктовым потолком.
+        Размер JSON и время обработки задаются RITM_IMPORT_MAX_BYTES и
+        RITM_IMPORT_TIMEOUT_SECONDS (по умолчанию 256 MiB и 120 секунд).
         Имена файлов фиксированы. Bundled train/validate не изменяются.
         Ошибка оставляет прежний контекст и прежний custom; импорт удаляется
         после перезапуска backend. points необязателен и включается только
@@ -244,12 +249,12 @@ def create_app(*, start_background: bool = True, enable_ndtp: bool = True, ml_ur
                 if declared < 0:
                     raise HTTPException(400, 'Некорректный Content-Length')
                 if declared > MAX_CUSTOM_IMPORT_BYTES:
-                    raise HTTPException(413, 'JSON с CSV превышает 80 MiB')
+                    raise HTTPException(413, f'JSON с CSV превышает лимит {MAX_CUSTOM_IMPORT_BYTES} байт; увеличьте RITM_IMPORT_MAX_BYTES при запуске')
             async def read_limited():
                 body = bytearray()
                 async for chunk in request.stream():
                     if len(body)+len(chunk) > MAX_CUSTOM_IMPORT_BYTES:
-                        raise HTTPException(413, 'JSON с CSV превышает 80 MiB')
+                        raise HTTPException(413, f'JSON с CSV превышает лимит {MAX_CUSTOM_IMPORT_BYTES} байт; увеличьте RITM_IMPORT_MAX_BYTES при запуске')
                     body.extend(chunk)
                 return body
             try:

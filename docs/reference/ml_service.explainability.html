@@ -20,7 +20,7 @@
 <table class="section">
 <tr class="decor pkg-content-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
-    
+
 <tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><table><tr><td class="multicolumn">json<br>
 </td><td class="multicolumn">math<br>
@@ -30,7 +30,7 @@
 <table class="section">
 <tr class="decor index-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Classes</strong></td></tr>
-    
+
 <tr><td class="decor index-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><dl>
 <dt class="heading-text">builtins.object
@@ -45,7 +45,7 @@
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="FeatureGroup">class <strong>FeatureGroup</strong></a>(builtins.object)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#FeatureGroup">FeatureGroup</a>(code:&nbsp;'str',&nbsp;title:&nbsp;'str',&nbsp;features:&nbsp;'tuple[str,&nbsp;...]')&nbsp;-&amp;gt;&nbsp;None<br>
 &nbsp;<br>
@@ -86,7 +86,7 @@ Data and other attributes defined here:<br>
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="GroupedShapleyExplainer">class <strong>GroupedShapleyExplainer</strong></a>(builtins.object)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#GroupedShapleyExplainer">GroupedShapleyExplainer</a>(*,&nbsp;estimator,&nbsp;feature_names:&nbsp;'Sequence[str]',&nbsp;groups:&nbsp;'Sequence[<a href="#FeatureGroup">FeatureGroup</a>]',&nbsp;derived_features:&nbsp;'Sequence[str]',&nbsp;reference:&nbsp;'dict[str,&nbsp;float]',&nbsp;reference_description:&nbsp;'str',&nbsp;repair:&nbsp;'Callable[[pd.DataFrame],&nbsp;None]&nbsp;|&nbsp;None'&nbsp;=&nbsp;None)&nbsp;-&amp;gt;&nbsp;'None'<br>
 &nbsp;<br>
@@ -109,7 +109,7 @@ Data descriptors defined here:<br>
 <table class="section">
 <tr class="decor functions-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
-    
+
 <tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><dl><dt><a name="-load_hybrid_explainer"><strong>load_hybrid_explainer</strong></a>(estimator, path: 'Path', *, model_sha256: 'str', encoder_sha256: 'str', feature_names: 'Sequence[str]') -&gt; 'GroupedShapleyExplainer'</dt><dd><span class="code">Загрузить&nbsp;привязанный&nbsp;к&nbsp;конкретным&nbsp;весам&nbsp;реальный&nbsp;reference-пример.</span></dd></dl>
  <dl><dt><a name="-restore_plan_relations"><strong>restore_plan_relations</strong></a>(frame: 'pd.DataFrame') -&gt; 'None'</dt><dd><span class="code">Восстановить&nbsp;точные&nbsp;зависимости&nbsp;feature&nbsp;builder&nbsp;после&nbsp;подстановки.</span></dd></dl>
@@ -117,7 +117,7 @@ Data descriptors defined here:<br>
 <table class="section">
 <tr class="decor data-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
-    
+
 <tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><strong>Callable</strong> = typing.Callable<br>
 <strong>HYBRID_GROUPS</strong> = (FeatureGroup(code='current_state', title='Текущее отклонение', features=('cur_dev_s',)), FeatureGroup(code='forecast_horizon', title='Горизонт прогноза', features=('horizon_min',)), FeatureGroup(code='route_position', title='Полож...е', features=('target_rel_pos', 'state_rel_pos')), FeatureGroup(code='remaining_path', title='Остав...ть', features=('stops_ahead', 'plan_interval_s')), FeatureGroup(code='plan_context', title='Структу..._len', 'plan_manual_target', 'plan_manual_rate')), FeatureGroup(code='sequence_history', title='Ист...я динамика задержки', features=('neural_prior',)))<br>

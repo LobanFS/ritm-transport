@@ -230,9 +230,9 @@ def test_gps_warmup_is_explicit_and_zero_does_not_read_previous_observations(dat
     e.set_replay(replay(dataset, deviation_source='gps', warmup_minutes=30))
     assert e.deviation_at(1,T).delay_s == 30
     assert all(max(point.event_time,point.received_at) <= T for point in e.history[1])
-    for minutes in (-1, 121):
-        with pytest.raises(ValueError):
-            replay(dataset, warmup_minutes=minutes)
+    with pytest.raises(ValueError):
+        replay(dataset, warmup_minutes=-1)
+    assert replay(dataset, warmup_minutes=240).config.warmup_minutes == 240
 
 
 def test_gps_replay_api_exposes_source_and_rejects_unknown_source_atomically(dataset, monkeypatch):
@@ -373,8 +373,7 @@ def test_all_fleet_loads_39_vehicles_and_reports_missing_context(dataset):
     assert len(manual.context.vehicles) == 39
     with pytest.raises(ValueError, match='40'):
         load_replay(dataset, ReplayConfig(start=T, deviation_source='gps', tr_ids=[1,40]))
-    with pytest.raises(ValueError):
-        ReplayConfig(tr_ids=list(range(1,130)))
+    assert len(ReplayConfig(tr_ids=list(range(1,130))).tr_ids) == 129
 
 
 def test_stream_diagnostics_explain_gap_and_end_without_feeding_future_to_model(dataset):
@@ -501,17 +500,29 @@ def test_warmup_only_archive_is_finished_on_load_and_reset(dataset, monkeypatch)
         assert reset['end'] == state['end'] and reset['finished'] and not reset['running']
 
 
-def test_event_resource_limit_fails_explicitly_without_truncating(dataset, monkeypatch):
-    from backend import replay as module
-    monkeypatch.setattr(module, 'MAX_REPLAY_EVENTS', 2)
-    with pytest.raises(ValueError, match='Более 2 событий'):
-        load_replay(dataset, ReplayConfig(start=T, deviation_source='gps'))
-
-
-@pytest.mark.parametrize('minutes', [-1,0,121])
-def test_explicit_duration_remains_bounded_for_manual_checks(minutes):
+@pytest.mark.parametrize('minutes', [-1, 0])
+def test_explicit_duration_must_be_positive(minutes):
     with pytest.raises(ValueError):
         ReplayConfig(duration_minutes=minutes)
+
+
+def test_replay_config_allows_large_fleet_and_long_requested_history():
+    config = ReplayConfig(tr_ids=list(range(1, 300)), duration_minutes=1440, warmup_minutes=240)
+    assert len(config.tr_ids) == 299 and config.duration_minutes == 1440
+
+
+@pytest.mark.parametrize('value', ['0', '-1', 'unlimited', '1.5'])
+def test_import_resource_budgets_require_positive_finite_integers(monkeypatch, value):
+    from backend.replay import positive_env_int
+    monkeypatch.setenv('TEST_IMPORT_BUDGET', value)
+    with pytest.raises(ValueError):
+        positive_env_int('TEST_IMPORT_BUDGET', 120)
+
+
+def test_import_resource_budgets_are_configurable(monkeypatch):
+    from backend.replay import positive_env_int
+    monkeypatch.setenv('TEST_IMPORT_BUDGET', '3600')
+    assert positive_env_int('TEST_IMPORT_BUDGET', 120) == 3600
 
 
 @pytest.mark.parametrize('argv,expected', [([], None), (['--minutes','15'], 15)])
@@ -657,15 +668,13 @@ def test_custom_import_body_limit_checks_header_and_stream_without_changing_cont
         assert client.get('/api/v1/state').json()['replay'] == state['replay']
 
 
-@pytest.mark.parametrize('limit', ['rows', 'time'])
-def test_custom_import_resource_limit_failure_is_atomic(custom_payload, monkeypatch, limit):
+def test_custom_import_timeout_failure_is_atomic(custom_payload, monkeypatch):
     from backend import replay as module
     app = create_app(start_background=False, enable_ndtp=False)
     with TestClient(app) as client:
         assert client.post('/api/v1/replay/import', json=custom_payload).status_code == 200
         state = client.get('/api/v1/state').json()
-        if limit == 'rows': monkeypatch.setattr(module, 'MAX_REPLAY_EVENTS', 2)
-        else: monkeypatch.setattr(module, 'CUSTOM_IMPORT_SECONDS', -1)
+        monkeypatch.setattr(module, 'CUSTOM_IMPORT_SECONDS', -1)
         assert client.post('/api/v1/replay/import', json=custom_payload).status_code == 422
         assert client.get('/api/v1/state').json()['replay'] == state['replay']
 
@@ -719,3 +728,73 @@ def test_parallel_import_load_and_context_change_do_not_publish_staged_archive(c
         assert app.state.custom_dataset == original_custom
         assert list(app.state.custom_storage.iterdir()) == [original_custom['root']]
         assert client.post('/api/v1/replay/load', json={'dataset_split': 'custom'}).status_code == 200
+
+
+def test_replay_load_timeout_preserves_context_after_worker_finishes(dataset, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    import importlib
+    import threading
+
+    module = importlib.import_module('backend.app')
+    monkeypatch.setenv('REPLAY_DATA_DIR', str(dataset))
+    app = create_app(start_background=False, enable_ndtp=False)
+    with TestClient(app) as client:
+        assert client.post('/api/v1/replay/load', json={'start': T.isoformat()}).status_code == 200
+        engine = app.state.engine
+        previous_replay, previous_version = engine.replay, engine.version
+        previous_state = client.get('/api/v1/state').json()
+        late_replay = load_replay(dataset, ReplayConfig(start=T+timedelta(seconds=10)))
+        entered, finish, completed = threading.Event(), threading.Event(), threading.Event()
+
+        def slow_load(*args):
+            entered.set()
+            try:
+                assert finish.wait(timeout=5)
+                return late_replay
+            finally:
+                completed.set()
+
+        monkeypatch.setattr(module, 'load_replay', slow_load)
+        monkeypatch.setattr(module, 'CUSTOM_IMPORT_SECONDS', .1)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            response = pool.submit(client.post, '/api/v1/replay/load', json={'start': (T+timedelta(seconds=10)).isoformat()})
+            try:
+                assert entered.wait(timeout=5)
+                assert response.result(timeout=5).status_code == 408
+                assert not completed.is_set()
+                assert engine.replay is previous_replay and engine.version == previous_version
+                assert client.get('/api/v1/state').json()['replay'] == previous_state['replay']
+            finally:
+                finish.set()
+            assert completed.wait(timeout=5)
+        # Дать event loop обработать завершение to_thread после отмены ожидания.
+        client.portal.call(asyncio.sleep, .01)
+        assert engine.replay is previous_replay and engine.version == previous_version
+        state = client.get('/api/v1/state').json()
+        assert state['replay'] == previous_state['replay']
+        assert state['vehicles'] == previous_state['vehicles']
+
+
+def test_custom_archive_over_128_vehicles_and_20000_visits_keeps_every_vehicle_and_plan():
+    traffic, schedule = io.StringIO(), io.StringIO()
+    gps, plan = csv.writer(traffic), csv.writer(schedule)
+    gps.writerow(['tr_id', 'unit_id', 'event_time', 'receive_time', 'packet_id', 'lat', 'lon', 'speed', 'heading', 'location_valid'])
+    plan.writerow(['tr_id', 'tt_action_item_id', 'time_begin', 'geom', 'building_address'])
+    vehicle_count, visits_per_vehicle = 129, 156
+    for tr_id in range(1, vehicle_count + 1):
+        gps.writerow([tr_id, tr_id + 10000, T.isoformat(), T.isoformat(), f'gps-{tr_id}', 55.75, 37.60, 20, 0, True])
+        for visit in range(visits_per_vehicle):
+            at = T + timedelta(minutes=visit)
+            plan.writerow([tr_id, f'{tr_id}-{visit}', at.isoformat(),
+                           f'POINT ({37.60 + visit * .0001} 55.75)', f'Остановка {visit}'])
+    app = create_app(start_background=False, enable_ndtp=False)
+    with TestClient(app) as client:
+        result = client.post('/api/v1/replay/import', json={'traffic_csv': traffic.getvalue(),
+            'schedule_csv': schedule.getvalue(), 'timezone': 'UTC'})
+        assert result.status_code == 200, result.text
+        replay = result.json()['replay']
+        assert len(replay['tr_ids']) == vehicle_count
+        assert replay['total'] == replay['delivered'] == vehicle_count
+        assert sum(len(stops) for stops in app.state.engine.schedule.values()) == vehicle_count * visits_per_vehicle
+        assert len(client.get('/api/v1/state').json()['vehicles']) == vehicle_count
+        assert all(len(items) == 1 for items in app.state.engine.history.values())

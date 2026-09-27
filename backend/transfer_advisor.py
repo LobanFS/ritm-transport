@@ -7,11 +7,10 @@
 from __future__ import annotations
 
 import math
-from collections import defaultdict
 from datetime import datetime, timedelta
-from functools import lru_cache
 from typing import Mapping
 
+from backend.line_identity import has_line_geometry, same_line
 from common.transfer import DonorImpact, TransferAdvice, TransferScenario, TransferVehicle
 
 NEEDED_DELAY_S = 150
@@ -30,52 +29,6 @@ def _distance(a, b):
     lon1, lat1, lon2, lat2 = map(math.radians, (*a, *b))
     h = math.sin((lat2-lat1)/2)**2 + math.cos(lat1)*math.cos(lat2)*math.sin((lon2-lon1)/2)**2
     return 6371000 * 2 * math.asin(min(1, math.sqrt(h)))
-
-
-def _geometry(route):
-    stops = route.get('stops') or []
-    raw = [(s['lon'], s['lat']) for s in stops] if stops else route.get('path', [])
-    points = list(dict.fromkeys((round(p[0], 5), round(p[1], 5)) for p in raw))
-    # Ограничение работы на custom-планах с тысячами промежуточных вершин.
-    return points if len(points) <= 256 else [points[round(i*(len(points)-1)/255)] for i in range(256)]
-
-
-def same_line(a, b):
-    """ID плана одного ТС не доказывает другую линию.
-
-    Совпадающие/вложенные геометрии считаем одной линией в обе стороны.
-    Один общий пересадочный узел не объединяет разные линии.
-    """
-    if a.get('route_id') == b.get('route_id'):
-        return True
-    left, right = _geometry(a), _geometry(b)
-    if not left or not right:
-        return True  # Другую линию нельзя подтвердить без геометрии.
-    if len(left) > len(right):
-        left, right = right, left
-    return _same_geometry(tuple(left), tuple(right))
-
-
-@lru_cache(maxsize=256)
-def _same_geometry(left, right):
-    # Географическая сетка отсекает далёкие остановки до гаверсина. Масштаб
-    # долготы взят по крайней широте: ячейки не мельче радиуса сопоставления.
-    lat_scale = 6371000 * math.pi / 180 / 80
-    lon_scale = lat_scale * max(.00001, math.cos(math.radians(max(abs(p[1]) for p in (*left, *right)))))
-    origin = left[0][0]
-    def cell(point):
-        longitude = (point[0]-origin+180) % 360-180
-        return math.floor(longitude*lon_scale), math.floor(point[1]*lat_scale)
-    grid = defaultdict(list)
-    for point in right:
-        grid[cell(point)].append(point)
-    matches = 0
-    for point in left:
-        x, y = cell(point)
-        if any(_distance(point, q) <= 80 for dx in (-1, 0, 1) for dy in (-1, 0, 1)
-               for q in grid.get((x+dx, y+dy), ())):
-            matches += 1
-    return matches >= min(2, len(left)) and matches / len(left) >= .6
 
 
 def _ready(vehicle, now):
@@ -118,7 +71,7 @@ def advise_transfer(snapshot: Mapping, schedule: Mapping, tr_id: int) -> Transfe
     if forecast['predicted_delay_s'] < NEEDED_DELAY_S:
         return TransferAdvice(**base, status='not_needed', reason='Перевод с другой линии сейчас не требуется: прогноз задержки меньше 2,5 минут')
     target_route = routes.get(target['route_id'])
-    if not target_route:
+    if not target_route or not has_line_geometry(target_route):
         return TransferAdvice(**base, status='unavailable', reason='Не загружена геометрия целевой линии')
     stop = forecast['target']
     planned_at = _time(stop['scheduled_at'])
@@ -133,7 +86,7 @@ def advise_transfer(snapshot: Mapping, schedule: Mapping, tr_id: int) -> Transfe
         if distance > MAX_DISTANCE_M:
             continue
         route = routes.get(candidate['route_id'])
-        if not route or same_line(target_route, route):
+        if not route or not has_line_geometry(route) or same_line(target_route, route):
             continue
         considered += 1
         relocation = math.ceil(120 + distance * 1.4 / (20 / 3.6))

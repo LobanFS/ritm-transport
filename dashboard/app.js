@@ -176,7 +176,26 @@
   const mapCardWidth = () => window.innerWidth > 1100
     ? (document.querySelector(".vehicle-panel")?.getBoundingClientRect().width || 0) + 28 : 0;
   const mapFleetWidth = () => window.innerWidth > 1100
-    ? (document.querySelector(".fleet-panel")?.getBoundingClientRect().width || 0) + 28 : 0;
+    && !$("vehicles-section").hidden ? (document.querySelector(".fleet-panel")?.getBoundingClientRect().width || 0) + 28 : 0;
+
+  function setFleetOpen(open) {
+    $("vehicles-section").hidden = !open;
+    $("map-section").classList.toggle("is-fleet-hidden", !open);
+    $("fleet-toggle").setAttribute("aria-expanded", String(open));
+    text("fleet-toggle", open ? "Скрыть список" : "Показать список");
+    map?.invalidateSize({pan: false});
+    if (followSelected && chosenVehicle()) focusVehicle();
+  }
+
+  const sameSelectedLine = (vehicle, selected, state) => !!vehicle && !!selected
+    && (state?.line_memberships?.[selected.route_id] || [selected.route_id])
+      .some(routeId => idOf(routeId) === idOf(vehicle.route_id));
+
+  function vehiclesOnMap(filtered) {
+    const selected = chosenVehicle();
+    const ids = new Set(filtered.map(v => idOf(v.tr_id)));
+    return [...filtered, ...list(snapshot?.vehicles).filter(v => !ids.has(idOf(v.tr_id)) && sameSelectedLine(v, selected, snapshot))];
+  }
 
   function centreVehicle(position, zoom = map.getZoom()) {
     map.setView(position, zoom, {animate: false});
@@ -202,7 +221,7 @@
       paths.forEach(path => path.forEach(point => { const p = Array.isArray(point) && latLng(point[0], point[1]); if (p) points.push(p); }));
       list(route.stops).forEach(stop => { const p = latLng(stop.lon, stop.lat); if (p) points.push(p); });
     });
-    filteredVehicles().filter(v => !onlySelectedRoute || idOf(v.route_id) === routeId).forEach(v => { const p = latLng(v.lon, v.lat); if (p) points.push(p); });
+    vehiclesOnMap(filteredVehicles()).filter(v => !onlySelectedRoute || sameSelectedLine(v, vehicle, snapshot)).forEach(v => { const p = latLng(v.lon, v.lat); if (p) points.push(p); });
     if (points.length) { setFollow(false); map.fitBounds(points, { paddingTopLeft: [48 + mapFleetWidth(), 48], paddingBottomRight: [48 + mapCardWidth(), 100], maxZoom: 18, animate: false }); }
     else toast("Нет координат для выбранного маршрута.");
   }
@@ -336,6 +355,7 @@
   function renderMap(vehicles) {
     initMap();
     renderRouteGeometry();
+    vehicles = vehiclesOnMap(vehicles);
     const clock = timestamp(snapshot?.clock_time);
     const contextKey = JSON.stringify([snapshot?.mode, snapshot?.context?.version,
       snapshot?.context?.loaded_at, snapshot?.generator?.session_id,
@@ -381,8 +401,10 @@
       marker.layer.setLatLng(position);
       const risk = effectiveRisk(vehicle);
       const directionLabel = hasDirection ? ` · курс ${Math.round(direction)}°` : "";
-      const accessibleLabel = `${vehicleName(vehicle)}, ${RISK[risk].label}, ${delay(displayedDelay(vehicle))}${directionLabel}`;
+      const lineMember = sameSelectedLine(vehicle, chosenVehicle(), snapshot);
+      const accessibleLabel = `${vehicleName(vehicle)}, ${RISK[risk].label}, ${delay(displayedDelay(vehicle))}${directionLabel}${lineMember ? " · выбранная линия" : ""}`;
       const element = marker.layer.getElement();
+      element.classList.toggle("is-line-member", lineMember);
       element.classList.toggle("is-selected", key === selectedId);
       element.setAttribute("aria-pressed", String(key === selectedId));
       element.setAttribute("aria-label", accessibleLabel);
@@ -392,7 +414,7 @@
       marker.code.textContent = String(vehicle.tr_id);
       const label = vehicleName(vehicle).replace(/^Автобус\s*/i, "").slice(0, 18);
       marker.label.textContent = label === String(vehicle.tr_id) ? "" : label;
-      marker.layer.setZIndexOffset(key === selectedId ? 1000 : 0);
+      marker.layer.setZIndexOffset(key === selectedId ? 1000 : lineMember ? 500 : 0);
     });
     markers.forEach((marker, key) => { if (!visibleIds.has(key) && map?.hasLayer(marker.layer)) map.removeLayer(marker.layer); });
     const existingIds = new Set(list(snapshot?.vehicles).map(vehicle => idOf(vehicle.tr_id)));
@@ -666,6 +688,7 @@
       let record = tableRows.get(key);
       if (!record) { record = createTableRow(key); tableRows.set(key, record); }
       record.row.classList.toggle("is-selected", key === selectedId);
+      record.row.classList.toggle("is-line-member", sameSelectedLine(vehicle, chosenVehicle(), snapshot));
       record.button.textContent = vehicleName(vehicle).replace(/^Автобус\s*/i, "");
       record.button.title = `${vehicleName(vehicle)} · ${routeName(vehicle)}`;
       record.predicted.textContent = delay(displayedDelay(vehicle), true);
@@ -691,7 +714,7 @@
     const signature = JSON.stringify([incidents, incidents.map(historical)]);
     if (signature === incidentSignature) return;
     incidentSignature = signature;
-    $("incident-timeline").replaceChildren(...incidents.slice(0, 50).map((incident) => {
+    $("incident-timeline").replaceChildren(...incidents.map((incident) => {
       const risk = delayBand(incident.predicted_delay_s);
       const item = node("li", `timeline-item risk-${risk}${historical(incident) ? " is-historical" : ""}`);
       const heading = node("div", "timeline-title");
@@ -841,9 +864,10 @@
     const schedule = $("custom-schedule").files[0];
     const points = $("custom-points").files[0];
     if (!traffic || !schedule) { text("custom-import-status", "Выберите телеметрию и расписание."); return; }
-    const limit = 80 * 1024 * 1024;
+    const limit = Number(window.RITM_CONFIG?.importMaxBytes) || 256 * 1024 * 1024;
+    const limitMessage = `Общий размер запроса не должен превышать ${Math.round(limit / 1024 / 1024)} МиБ.`;
     if ([traffic, schedule, points].reduce((sum, file) => sum + (file?.size || 0), 0) > limit) {
-      text("custom-import-status", "Общий размер запроса не должен превышать 80 МиБ."); return;
+      text("custom-import-status", limitMessage); return;
     }
     busy = true;
     setButtonBusy();
@@ -851,8 +875,9 @@
     try {
       const [traffic_csv, schedule_csv, points_csv] = await Promise.all([traffic.text(), schedule.text(), points ? points.text() : null]);
       const body = JSON.stringify({traffic_csv, schedule_csv, points_csv, timezone: $("custom-timezone").value});
-      if (new TextEncoder().encode(body).length > limit) throw new Error("Общий размер запроса не должен превышать 80 МиБ.");
-      const result = await request("/api/v1/replay/import", {method: "POST", headers: {"Content-Type": "application/json"}, body}, 60000);
+      if (new TextEncoder().encode(body).length > limit) throw new Error(limitMessage);
+      const timeout = (2 * (Number(window.RITM_CONFIG?.importTimeoutSeconds) || 120) + 10) * 1000;
+      const result = await request("/api/v1/replay/import", {method: "POST", headers: {"Content-Type": "application/json"}, body}, timeout);
       customArchive = {...result.custom, start: result.replay.start, end: result.replay.end};
       replayConfigSignature = "";
       resetSelection();
@@ -868,8 +893,8 @@
   function startReplay(event) {
     event.preventDefault();
     const tr_ids = $("replay-selection").value === "manual" ? $("replay-vehicles").value.trim().split(/[,;\s]+/).map(Number) : null;
-    if (tr_ids && (!tr_ids.length || tr_ids.length > 128 || tr_ids.some(id => !Number.isSafeInteger(id) || id <= 0) || new Set(tr_ids).size !== tr_ids.length)) {
-      toast("Укажите от 1 до 128 разных положительных ID автобусов через запятую."); return;
+    if (tr_ids && (!tr_ids.length || tr_ids.some(id => !Number.isSafeInteger(id) || id <= 0) || new Set(tr_ids).size !== tr_ids.length)) {
+      toast("Укажите разные положительные ID автобусов через запятую."); return;
     }
     const start = new Date($("replay-start").value + "Z");
     if (!Number.isFinite(start.getTime())) { toast("Укажите корректное начало среза в UTC."); return; }
@@ -956,7 +981,9 @@
     busy = true;
     setButtonBusy();
     try {
-      await request(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, url === "/api/v1/replay/load" ? 30000 : 5000);
+      const timeout = url === "/api/v1/replay/load"
+        ? ((Number(window.RITM_CONFIG?.importTimeoutSeconds) || 120) + 10) * 1000 : 5000;
+      await request(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, timeout);
       if (payload.action === "reset" || payload.mode || url === "/api/v1/replay/load") resetSelection();
       await poll();
       toast(successText);
@@ -967,6 +994,9 @@
 
   ["risk-red", "risk-amber"].forEach((id) => $(id).addEventListener("change", render));
   $("vehicle-search").addEventListener("input", render);
+  $("fleet-toggle").addEventListener("click", () => setFleetOpen($("vehicles-section").hidden));
+  $("fleet-close").addEventListener("click", () => setFleetOpen(false));
+  document.querySelectorAll('a[href="#vehicles-section"]').forEach(link => link.addEventListener("click", () => setFleetOpen(true)));
   $("transfer-donor-button").addEventListener("click", showTransferDonor);
   ["vehicle-table-body", "incident-timeline", "attention-list"].forEach((id) => $(id).addEventListener("click", (event) => {
     const target = event.target.closest("[data-vehicle-id]");

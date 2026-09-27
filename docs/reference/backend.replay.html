@@ -20,19 +20,20 @@
 <table class="section">
 <tr class="decor pkg-content-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
-    
+
 <tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><table><tr><td class="multicolumn">csv<br>
 hashlib<br>
 </td><td class="multicolumn">json<br>
 math<br>
-</td><td class="multicolumn">re<br>
-time<br>
-</td><td class="multicolumn"></td></tr></table></td></tr></table><p>
+</td><td class="multicolumn">os<br>
+re<br>
+</td><td class="multicolumn">time<br>
+</td></tr></table></td></tr></table><p>
 <table class="section">
 <tr class="decor index-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Classes</strong></td></tr>
-    
+
 <tr><td class="decor index-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><dl>
 <dt class="heading-text">builtins.object
@@ -55,7 +56,7 @@ time<br>
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="LoadedReplay">class <strong>LoadedReplay</strong></a>(builtins.object)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#LoadedReplay">LoadedReplay</a>(config:&nbsp;'<a href="#ReplayConfig">ReplayConfig</a>',&nbsp;context:&nbsp;'object',&nbsp;events:&nbsp;'list',&nbsp;sources:&nbsp;'dict',&nbsp;quality:&nbsp;'dict',&nbsp;cursor:&nbsp;'int'&nbsp;=&nbsp;0,&nbsp;fleet:&nbsp;'dict'&nbsp;=&nbsp;&amp;lt;factory&amp;gt;,&nbsp;telemetry_times:&nbsp;'dict[int,&nbsp;list[datetime]]'&nbsp;=&nbsp;&amp;lt;factory&amp;gt;,&nbsp;position_times:&nbsp;'dict[int,&nbsp;list[datetime]]'&nbsp;=&nbsp;&amp;lt;factory&amp;gt;)&nbsp;-&amp;gt;&nbsp;None<br>
 &nbsp;<br>
@@ -102,9 +103,9 @@ Data and other attributes defined here:<br>
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="ReplayConfig">class <strong>ReplayConfig</strong></a>(<a href="common.contracts.html#Contract">common.contracts.Contract</a>)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
-<td class="decor title-decor" colspan=2><span class="code"><a href="#ReplayConfig">ReplayConfig</a>(*,&nbsp;dataset_split:&nbsp;Literal['validate',&nbsp;'train',&nbsp;'custom']&nbsp;=&nbsp;'validate',&nbsp;start:&nbsp;pydantic.types.AwareDatetime&nbsp;|&nbsp;None&nbsp;=&nbsp;datetime.datetime(2026,&nbsp;1,&nbsp;6,&nbsp;11,&nbsp;30,&nbsp;tzinfo=datetime.timezone.utc),&nbsp;duration_minutes:&nbsp;Annotated[int&nbsp;|&nbsp;None,&nbsp;Ge(ge=1),&nbsp;Le(le=120)]&nbsp;=&nbsp;None,&nbsp;timezone:&nbsp;str&nbsp;=&nbsp;'UTC',&nbsp;tr_ids:&nbsp;Annotated[list[int]&nbsp;|&nbsp;None,&nbsp;MinLen(min_length=1),&nbsp;MaxLen(max_length=128)]&nbsp;=&nbsp;None,&nbsp;speed:&nbsp;Annotated[float,&nbsp;Ge(ge=1),&nbsp;Le(le=30)]&nbsp;=&nbsp;10,&nbsp;paused:&nbsp;bool&nbsp;=&nbsp;True,&nbsp;deviation_source:&nbsp;Literal['csv_snapshot',&nbsp;'gps']&nbsp;=&nbsp;'csv_snapshot',&nbsp;warmup_minutes:&nbsp;Annotated[int,&nbsp;Ge(ge=0),&nbsp;Le(le=120)]&nbsp;=&nbsp;5)&nbsp;-&amp;gt;&nbsp;None<br>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#ReplayConfig">ReplayConfig</a>(*,&nbsp;dataset_split:&nbsp;Literal['validate',&nbsp;'train',&nbsp;'custom']&nbsp;=&nbsp;'validate',&nbsp;start:&nbsp;pydantic.types.AwareDatetime&nbsp;|&nbsp;None&nbsp;=&nbsp;datetime.datetime(2026,&nbsp;1,&nbsp;6,&nbsp;11,&nbsp;30,&nbsp;tzinfo=datetime.timezone.utc),&nbsp;duration_minutes:&nbsp;Annotated[int&nbsp;|&nbsp;None,&nbsp;Ge(ge=1)]&nbsp;=&nbsp;None,&nbsp;timezone:&nbsp;str&nbsp;=&nbsp;'UTC',&nbsp;tr_ids:&nbsp;Annotated[list[int]&nbsp;|&nbsp;None,&nbsp;MinLen(min_length=1)]&nbsp;=&nbsp;None,&nbsp;speed:&nbsp;Annotated[float,&nbsp;Ge(ge=1),&nbsp;Le(le=30)]&nbsp;=&nbsp;10,&nbsp;paused:&nbsp;bool&nbsp;=&nbsp;True,&nbsp;deviation_source:&nbsp;Literal['csv_snapshot',&nbsp;'gps']&nbsp;=&nbsp;'csv_snapshot',&nbsp;warmup_minutes:&nbsp;Annotated[int,&nbsp;Ge(ge=0)]&nbsp;=&nbsp;5)&nbsp;-&amp;gt;&nbsp;None<br>
 &nbsp;<br>
 <br>&nbsp;</span></td></tr>
 <tr><td>&nbsp;</td>
@@ -146,7 +147,7 @@ Data and other attributes defined here:<br>
 
 <dl><dt><strong>__pydantic_computed_fields__</strong> = {}</dl>
 
-<dl><dt><strong>__pydantic_core_schema__</strong> = {'function': {'function': &lt;function ReplayConfig.available_source&gt;, 'type': 'no-info'}, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'backend.replay.ReplayConfig'&gt;&gt;]}, 'ref': 'backend.replay.ReplayConfig:37245503504', 'schema': {'cls': &lt;class 'backend.replay.ReplayConfig'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'ReplayConfig'}, 'custom_init': False, 'root_model': False, 'schema': {'function': {'function': &lt;bound method ReplayConfig.custom_defaults of &lt;class 'backend.replay.ReplayConfig'&gt;&gt;, 'type': 'no-info'}, 'schema': {'computed_fields': [], 'fields': {'dataset_split': {'metadata': {}, 'schema': {...}, 'type': 'model-field'}, 'deviation_source': {'metadata': {}, 'schema': {...}, 'type': 'model-field'}, 'duration_minutes': {'metadata': {...}, 'schema': {...}, 'type': 'model-field'}, 'paused': {'metadata': {}, 'schema': {...}, 'type': 'model-field'}, 'speed': {'metadata': {}, 'schema': {...}, 'type': 'model-field'}, 'start': {'metadata': {...}, 'schema': {...}, 'type': 'model-field'}, 'timezone': {'metadata': {}, 'schema': {...}, 'type': 'model-field'}, 'tr_ids': {'metadata': {...}, 'schema': {...}, 'type': 'model-field'}, 'warmup_minutes': {'metadata': {...}, 'schema': {...}, 'type': 'model-field'}}, 'model_name': 'ReplayConfig', 'type': 'model-fields'}, 'type': 'function-before'}, 'type': 'model'}, 'type': 'function-after'}</dl>
+<dl><dt><strong>__pydantic_core_schema__</strong> = {'function': {'function': &lt;function ReplayConfig.available_source&gt;, 'type': 'no-info'}, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'backend.replay.ReplayConfig'&gt;&gt;]}, 'ref': 'backend.replay.ReplayConfig:53352305680', 'schema': {'cls': &lt;class 'backend.replay.ReplayConfig'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'ReplayConfig'}, 'custom_init': False, 'root_model': False, 'schema': {'function': {'function': &lt;bound method ReplayConfig.custom_defaults of &lt;class 'backend.replay.ReplayConfig'&gt;&gt;, 'type': 'no-info'}, 'schema': {'computed_fields': [], 'fields': {'dataset_split': {'metadata': {}, 'schema': {...}, 'type': 'model-field'}, 'deviation_source': {'metadata': {}, 'schema': {...}, 'type': 'model-field'}, 'duration_minutes': {'metadata': {...}, 'schema': {...}, 'type': 'model-field'}, 'paused': {'metadata': {}, 'schema': {...}, 'type': 'model-field'}, 'speed': {'metadata': {}, 'schema': {...}, 'type': 'model-field'}, 'start': {'metadata': {...}, 'schema': {...}, 'type': 'model-field'}, 'timezone': {'metadata': {}, 'schema': {...}, 'type': 'model-field'}, 'tr_ids': {'metadata': {...}, 'schema': {...}, 'type': 'model-field'}, 'warmup_minutes': {'metadata': {...}, 'schema': {...}, 'type': 'model-field'}}, 'model_name': 'ReplayConfig', 'type': 'model-fields'}, 'type': 'function-before'}, 'type': 'model'}, 'type': 'function-after'}</dl>
 
 <dl><dt><strong>__pydantic_custom_init__</strong> = False</dl>
 
@@ -154,7 +155,7 @@ Data and other attributes defined here:<br>
 
 <dl><dt><strong>__pydantic_extra_info__</strong> = None</dl>
 
-<dl><dt><strong>__pydantic_fields__</strong> = {'dataset_split': FieldInfo(annotation=Literal['validate', 'train', 'custom'], required=False, default='validate'), 'deviation_source': FieldInfo(annotation=Literal['csv_snapshot', 'gps'], required=False, default='csv_snapshot'), 'duration_minutes': FieldInfo(annotation=Union[int, NoneType], requi...откой проверки', metadata=[Ge(ge=1), Le(le=120)]), 'paused': FieldInfo(annotation=bool, required=False, default=True), 'speed': FieldInfo(annotation=float, required=False, default=10, metadata=[Ge(ge=1), Le(le=30)]), 'start': FieldInfo(annotation=Union[AwareDatetime, NoneTy...елеметрия; для custom это значение по умолчанию'), 'timezone': FieldInfo(annotation=str, required=False, default='UTC'), 'tr_ids': FieldInfo(annotation=Union[list[int], NoneType],...a=[MinLen(min_length=1), MaxLen(max_length=128)]), 'warmup_minutes': FieldInfo(annotation=int, required=False, defaul...ются в очереди', metadata=[Ge(ge=0), Le(le=120)])}</dl>
+<dl><dt><strong>__pydantic_fields__</strong> = {'dataset_split': FieldInfo(annotation=Literal['validate', 'train', 'custom'], required=False, default='validate'), 'deviation_source': FieldInfo(annotation=Literal['csv_snapshot', 'gps'], required=False, default='csv_snapshot'), 'duration_minutes': FieldInfo(annotation=Union[int, NoneType], requi...окна для короткой проверки', metadata=[Ge(ge=1)]), 'paused': FieldInfo(annotation=bool, required=False, default=True), 'speed': FieldInfo(annotation=float, required=False, default=10, metadata=[Ge(ge=1), Le(le=30)]), 'start': FieldInfo(annotation=Union[AwareDatetime, NoneTy...елеметрия; для custom это значение по умолчанию'), 'timezone': FieldInfo(annotation=str, required=False, default='UTC'), 'tr_ids': FieldInfo(annotation=Union[list[int], NoneType],...: ручной выбор', metadata=[MinLen(min_length=1)]), 'warmup_minutes': FieldInfo(annotation=int, required=False, defaul...события остаются в очереди', metadata=[Ge(ge=0)])}</dl>
 
 <dl><dt><strong>__pydantic_generic_metadata__</strong> = {'args': (), 'origin': None, 'parameters': ()}</dl>
 
@@ -172,7 +173,7 @@ Data and other attributes defined here:<br>
     },
 ), definitions=[], cache_strings=True)</dl>
 
-<dl><dt><strong>__signature__</strong> = &lt;Signature (*, dataset_split: Literal['validate'...nnotated[int, Ge(ge=0), Le(le=120)] = 5) -&gt; None&gt;</dl>
+<dl><dt><strong>__signature__</strong> = &lt;Signature (*, dataset_split: Literal['validate'...p_minutes: Annotated[int, Ge(ge=0)] = 5) -&gt; None&gt;</dl>
 
 <dl><dt><strong>model_config</strong> = {'allow_inf_nan': False, 'extra': 'forbid'}</dl>
 
@@ -562,13 +563,13 @@ Data and other attributes inherited from pydantic.main.BaseModel:<br>
 
 <dl><dt><strong>model_computed_fields</strong> = {}</dl>
 
-<dl><dt><strong>model_fields</strong> = {'dataset_split': FieldInfo(annotation=Literal['validate', 'train', 'custom'], required=False, default='validate'), 'deviation_source': FieldInfo(annotation=Literal['csv_snapshot', 'gps'], required=False, default='csv_snapshot'), 'duration_minutes': FieldInfo(annotation=Union[int, NoneType], requi...откой проверки', metadata=[Ge(ge=1), Le(le=120)]), 'paused': FieldInfo(annotation=bool, required=False, default=True), 'speed': FieldInfo(annotation=float, required=False, default=10, metadata=[Ge(ge=1), Le(le=30)]), 'start': FieldInfo(annotation=Union[AwareDatetime, NoneTy...елеметрия; для custom это значение по умолчанию'), 'timezone': FieldInfo(annotation=str, required=False, default='UTC'), 'tr_ids': FieldInfo(annotation=Union[list[int], NoneType],...a=[MinLen(min_length=1), MaxLen(max_length=128)]), 'warmup_minutes': FieldInfo(annotation=int, required=False, defaul...ются в очереди', metadata=[Ge(ge=0), Le(le=120)])}</dl>
+<dl><dt><strong>model_fields</strong> = {'dataset_split': FieldInfo(annotation=Literal['validate', 'train', 'custom'], required=False, default='validate'), 'deviation_source': FieldInfo(annotation=Literal['csv_snapshot', 'gps'], required=False, default='csv_snapshot'), 'duration_minutes': FieldInfo(annotation=Union[int, NoneType], requi...окна для короткой проверки', metadata=[Ge(ge=1)]), 'paused': FieldInfo(annotation=bool, required=False, default=True), 'speed': FieldInfo(annotation=float, required=False, default=10, metadata=[Ge(ge=1), Le(le=30)]), 'start': FieldInfo(annotation=Union[AwareDatetime, NoneTy...елеметрия; для custom это значение по умолчанию'), 'timezone': FieldInfo(annotation=str, required=False, default='UTC'), 'tr_ids': FieldInfo(annotation=Union[list[int], NoneType],...: ручной выбор', metadata=[MinLen(min_length=1)]), 'warmup_minutes': FieldInfo(annotation=int, required=False, defaul...события остаются в очереди', metadata=[Ge(ge=0)])}</dl>
 
 </td></tr></table> <p>
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="ReplayControl">class <strong>ReplayControl</strong></a>(<a href="common.contracts.html#Contract">common.contracts.Contract</a>)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#ReplayControl">ReplayControl</a>(*,&nbsp;action:&nbsp;Literal['pause',&nbsp;'resume',&nbsp;'reset',&nbsp;'speed'],&nbsp;speed:&nbsp;Annotated[float&nbsp;|&nbsp;None,&nbsp;Ge(ge=1),&nbsp;Le(le=30)]&nbsp;=&nbsp;None)&nbsp;-&amp;gt;&nbsp;None<br>
 &nbsp;<br>
@@ -594,7 +595,7 @@ Data and other attributes defined here:<br>
 
 <dl><dt><strong>__pydantic_computed_fields__</strong> = {}</dl>
 
-<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'backend.replay.ReplayControl'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'ReplayControl'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'backend.replay.ReplayControl'&gt;&gt;]}, 'ref': 'backend.replay.ReplayControl:37245505552', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'action': {'metadata': {}, 'schema': {'expected': ['pause', 'resume', 'reset', 'speed'], 'type': 'literal'}, 'type': 'model-field'}, 'speed': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}}, 'model_name': 'ReplayControl', 'type': 'model-fields'}, 'type': 'model'}</dl>
+<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'backend.replay.ReplayControl'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'ReplayControl'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'backend.replay.ReplayControl'&gt;&gt;]}, 'ref': 'backend.replay.ReplayControl:53352307728', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'action': {'metadata': {}, 'schema': {'expected': ['pause', 'resume', 'reset', 'speed'], 'type': 'literal'}, 'type': 'model-field'}, 'speed': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}}, 'model_name': 'ReplayControl', 'type': 'model-fields'}, 'type': 'model'}</dl>
 
 <dl><dt><strong>__pydantic_custom_init__</strong> = False</dl>
 
@@ -1016,7 +1017,7 @@ Data and other attributes inherited from pydantic.main.BaseModel:<br>
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="ReplayImport">class <strong>ReplayImport</strong></a>(<a href="common.contracts.html#Contract">common.contracts.Contract</a>)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#ReplayImport">ReplayImport</a>(*,&nbsp;traffic_csv:&nbsp;Annotated[str,&nbsp;MinLen(min_length=1)],&nbsp;schedule_csv:&nbsp;Annotated[str,&nbsp;MinLen(min_length=1)],&nbsp;points_csv:&nbsp;Annotated[str&nbsp;|&nbsp;None,&nbsp;MinLen(min_length=1)]&nbsp;=&nbsp;None,&nbsp;timezone:&nbsp;str&nbsp;=&nbsp;'UTC')&nbsp;-&amp;gt;&nbsp;None<br>
 &nbsp;<br>
@@ -1046,7 +1047,7 @@ Data and other attributes defined here:<br>
 
 <dl><dt><strong>__pydantic_computed_fields__</strong> = {}</dl>
 
-<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'backend.replay.ReplayImport'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'ReplayImport'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'backend.replay.ReplayImport'&gt;&gt;]}, 'ref': 'backend.replay.ReplayImport:37245502480', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'points_csv': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, 'schedule_csv': {'metadata': {'pydantic_js_updates': {'description': 'План из schedule_plan.csv или schedule.csv; фактические прибытия игнорируются'}}, 'schema': {'min_length': 1, 'type': 'str'}, 'type': 'model-field'}, 'timezone': {'metadata': {}, 'schema': {'default': 'UTC', 'schema': {'function': {...}, 'schema': {...}, 'type': 'function-after'}, 'type': 'default'}, 'type': 'model-field'}, 'traffic_csv': {'metadata': {}, 'schema': {'min_length': 1, 'type': 'str'}, 'type': 'model-field'}}, 'model_name': 'ReplayImport', 'type': 'model-fields'}, 'type': 'model'}</dl>
+<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'backend.replay.ReplayImport'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'ReplayImport'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'backend.replay.ReplayImport'&gt;&gt;]}, 'ref': 'backend.replay.ReplayImport:53352304656', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'points_csv': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}, 'schedule_csv': {'metadata': {'pydantic_js_updates': {'description': 'План из schedule_plan.csv или schedule.csv; фактические прибытия игнорируются'}}, 'schema': {'min_length': 1, 'type': 'str'}, 'type': 'model-field'}, 'timezone': {'metadata': {}, 'schema': {'default': 'UTC', 'schema': {'function': {...}, 'schema': {...}, 'type': 'function-after'}, 'type': 'default'}, 'type': 'model-field'}, 'traffic_csv': {'metadata': {}, 'schema': {'min_length': 1, 'type': 'str'}, 'type': 'model-field'}}, 'model_name': 'ReplayImport', 'type': 'model-fields'}, 'type': 'model'}</dl>
 
 <dl><dt><strong>__pydantic_custom_init__</strong> = False</dl>
 
@@ -1468,7 +1469,7 @@ Data and other attributes inherited from pydantic.main.BaseModel:<br>
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="ReplayState">class <strong>ReplayState</strong></a>(<a href="common.contracts.html#Contract">common.contracts.Contract</a>)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#ReplayState">ReplayState</a>(*,&nbsp;dataset_split:&nbsp;Literal['validate',&nbsp;'train',&nbsp;'custom'],&nbsp;plan_file:&nbsp;str,&nbsp;points_file:&nbsp;str&nbsp;|&nbsp;None,&nbsp;start:&nbsp;pydantic.types.AwareDatetime,&nbsp;end:&nbsp;pydantic.types.AwareDatetime,&nbsp;duration_minutes:&nbsp;int&nbsp;|&nbsp;None,&nbsp;timezone:&nbsp;str,&nbsp;running:&nbsp;bool,&nbsp;finished:&nbsp;bool,&nbsp;speed:&nbsp;float,&nbsp;tr_ids:&nbsp;list[int],&nbsp;selection_mode:&nbsp;Literal['all_available',&nbsp;'manual'],&nbsp;fleet:&nbsp;dict,&nbsp;streams:&nbsp;list[dict],&nbsp;deviation_source:&nbsp;Literal['csv_snapshot',&nbsp;'gps'],&nbsp;warmup_minutes:&nbsp;int,&nbsp;delivered:&nbsp;int,&nbsp;total:&nbsp;int,&nbsp;sources_sha256:&nbsp;dict[str,&nbsp;str],&nbsp;quality:&nbsp;dict[str,&nbsp;int],&nbsp;note:&nbsp;str)&nbsp;-&amp;gt;&nbsp;None<br>
 &nbsp;<br>
@@ -1494,7 +1495,7 @@ Data and other attributes defined here:<br>
 
 <dl><dt><strong>__pydantic_computed_fields__</strong> = {}</dl>
 
-<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'backend.replay.ReplayState'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'ReplayState'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'backend.replay.ReplayState'&gt;&gt;]}, 'ref': 'backend.replay.ReplayState:37245504528', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'dataset_split': {'metadata': {}, 'schema': {'expected': ['validate', 'train', 'custom'], 'type': 'literal'}, 'type': 'model-field'}, 'delivered': {'metadata': {}, 'schema': {'type': 'int'}, 'type': 'model-field'}, 'deviation_source': {'metadata': {}, 'schema': {'expected': ['csv_snapshot', 'gps'], 'type': 'literal'}, 'type': 'model-field'}, 'duration_minutes': {'metadata': {}, 'schema': {'schema': {'type': 'int'}, 'type': 'nullable'}, 'type': 'model-field'}, 'end': {'metadata': {}, 'schema': {'microseconds_precision': 'truncate', 'type': 'datetime', 'tz_constraint': 'aware'}, 'type': 'model-field'}, 'finished': {'metadata': {}, 'schema': {'type': 'bool'}, 'type': 'model-field'}, 'fleet': {'metadata': {}, 'schema': {'keys_schema': {'type': 'any'}, 'type': 'dict', 'values_schema': {'type': 'any'}}, 'type': 'model-field'}, 'note': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}, 'plan_file': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}, 'points_file': {'metadata': {}, 'schema': {'schema': {'type': 'str'}, 'type': 'nullable'}, 'type': 'model-field'}, ...}, 'model_name': 'ReplayState', 'type': 'model-fields'}, 'type': 'model'}</dl>
+<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'backend.replay.ReplayState'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'ReplayState'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'backend.replay.ReplayState'&gt;&gt;]}, 'ref': 'backend.replay.ReplayState:53352306704', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'dataset_split': {'metadata': {}, 'schema': {'expected': ['validate', 'train', 'custom'], 'type': 'literal'}, 'type': 'model-field'}, 'delivered': {'metadata': {}, 'schema': {'type': 'int'}, 'type': 'model-field'}, 'deviation_source': {'metadata': {}, 'schema': {'expected': ['csv_snapshot', 'gps'], 'type': 'literal'}, 'type': 'model-field'}, 'duration_minutes': {'metadata': {}, 'schema': {'schema': {'type': 'int'}, 'type': 'nullable'}, 'type': 'model-field'}, 'end': {'metadata': {}, 'schema': {'microseconds_precision': 'truncate', 'type': 'datetime', 'tz_constraint': 'aware'}, 'type': 'model-field'}, 'finished': {'metadata': {}, 'schema': {'type': 'bool'}, 'type': 'model-field'}, 'fleet': {'metadata': {}, 'schema': {'keys_schema': {'type': 'any'}, 'type': 'dict', 'values_schema': {'type': 'any'}}, 'type': 'model-field'}, 'note': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}, 'plan_file': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}, 'points_file': {'metadata': {}, 'schema': {'schema': {'type': 'str'}, 'type': 'nullable'}, 'type': 'model-field'}, ...}, 'model_name': 'ReplayState', 'type': 'model-fields'}, 'type': 'model'}</dl>
 
 <dl><dt><strong>__pydantic_custom_init__</strong> = False</dl>
 
@@ -1916,7 +1917,7 @@ Data and other attributes inherited from pydantic.main.BaseModel:<br>
 <table class="section">
 <tr class="decor functions-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
-    
+
 <tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><dl><dt><a name="-bisect_right"><strong>bisect_right</strong></a>(a, x, lo=0, hi=None, *, key=None)</dt><dd><span class="code">Return&nbsp;the&nbsp;index&nbsp;where&nbsp;to&nbsp;insert&nbsp;item&nbsp;x&nbsp;in&nbsp;list&nbsp;a,&nbsp;assuming&nbsp;a&nbsp;is&nbsp;sorted.<br>
 &nbsp;<br>
@@ -1933,15 +1934,15 @@ A&nbsp;custom&nbsp;key&nbsp;function&nbsp;can&nbsp;be&nbsp;supplied&nbsp;to&nbsp
 Только&nbsp;фиксированные&nbsp;имена&nbsp;в&nbsp;каталоге&nbsp;из&nbsp;REPLAY_DATA_DIR.&nbsp;В&nbsp;режиме&nbsp;gps<br>
 points.csv&nbsp;вообще&nbsp;не&nbsp;открывается.&nbsp;API&nbsp;не&nbsp;принимает<br>
 пути.&nbsp;Загрузка&nbsp;атомарна:&nbsp;при&nbsp;ошибке&nbsp;текущий&nbsp;режим&nbsp;остаётся&nbsp;прежним.</span></dd></dl>
- <dl><dt><a name="-prepare_custom_replay"><strong>prepare_custom_replay</strong></a>(root: 'Path', payload: 'ReplayImport') -&gt; 'LoadedReplay'</dt><dd><span class="code">Проверить&nbsp;ограниченный&nbsp;пользовательский&nbsp;архив&nbsp;до&nbsp;смены&nbsp;активного&nbsp;контекста.</span></dd></dl>
+ <dl><dt><a name="-positive_env_int"><strong>positive_env_int</strong></a>(name: 'str', default: 'int') -&gt; 'int'</dt><dd><span class="code">Конечный&nbsp;ресурсный&nbsp;бюджет&nbsp;задаётся&nbsp;оператором&nbsp;при&nbsp;запуске.</span></dd></dl>
+ <dl><dt><a name="-prepare_custom_replay"><strong>prepare_custom_replay</strong></a>(root: 'Path', payload: 'ReplayImport') -&gt; 'LoadedReplay'</dt><dd><span class="code">Проверить&nbsp;пользовательский&nbsp;архив&nbsp;в&nbsp;заданном&nbsp;бюджете&nbsp;времени&nbsp;до&nbsp;смены&nbsp;активного&nbsp;контекста.</span></dd></dl>
 </td></tr></table><p>
 <table class="section">
 <tr class="decor data-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
-    
+
 <tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
-<td class="singlecolumn"><strong>CUSTOM_IMPORT_SECONDS</strong> = 30<br>
+<td class="singlecolumn"><strong>CUSTOM_IMPORT_SECONDS</strong> = 120<br>
 <strong>Literal</strong> = typing.Literal<br>
-<strong>MAX_CUSTOM_IMPORT_BYTES</strong> = 83886080<br>
-<strong>MAX_REPLAY_EVENTS</strong> = 500000</td></tr></table>
+<strong>MAX_CUSTOM_IMPORT_BYTES</strong> = 268435456</td></tr></table>
 </body></html>

@@ -93,7 +93,8 @@ class Docker:
                 raise AssertionError(f'Несколько контейнеров сервиса {service}; стенд неоднозначен')
             allowed_env = {'ML_URL', 'GENERATOR_URL', 'NDTP_HOST', 'NDTP_PORT', 'MODEL_PATH',
                            'PROBABILITY_PATH', 'REPLAY_DATA_DIR', 'OMP_NUM_THREADS',
-                           'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS'}
+                           'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS', 'DASHBOARD_UI_MODE',
+                           'RITM_IMPORT_MAX_BYTES', 'RITM_IMPORT_TIMEOUT_SECONDS', 'NDTP_MAX_CONNECTIONS'}
             selected[service] = dict(id=item['Id'], name=item['Name'], image_id=item['Image'],
                 image_name=item['Config']['Image'], started_at=item['State']['StartedAt'],
                 restart_count=item['RestartCount'], health=item['State'].get('Health', {}).get('Status'),
@@ -108,6 +109,20 @@ class Docker:
         if missing:
             raise AssertionError(f'Не хватает сервисов: {", ".join(sorted(missing))}')
         return selected
+
+    def dashboard_config(self, inventory):
+        source = self.run('exec', inventory['dashboard']['id'], 'cat', '/usr/share/nginx/html/config.js').strip()
+        prefix = 'window.RITM_CONFIG = '
+        if not source.startswith(prefix) or not source.endswith(';'):
+            raise AssertionError('Некорректный runtime config.js дашборда')
+        actual = json.loads(source[len(prefix):-1])
+        env = inventory['dashboard']['environment']
+        expected = {'uiMode': env.get('DASHBOARD_UI_MODE', 'full'),
+                    'importMaxBytes': int(env.get('RITM_IMPORT_MAX_BYTES', '268435456')),
+                    'importTimeoutSeconds': int(env.get('RITM_IMPORT_TIMEOUT_SECONDS', '120'))}
+        if actual != expected:
+            raise AssertionError('Runtime config.js не соответствует настройкам контейнера')
+        return actual
 
     def source_hashes(self, inventory):
         result = {}
@@ -152,6 +167,8 @@ async def run(args, out, report):
     check_bound_endpoint(inventory, 'ml', args.ml_url, 8001)
     check_bound_endpoint(inventory, 'backend', f'http://{args.ndtp_host}:{args.ndtp_port}', 9201)
     hashes = await asyncio.to_thread(docker.source_hashes, inventory)
+    report['dashboard_config'] = await asyncio.to_thread(docker.dashboard_config, inventory)
+    report['runtime_generated_assets_sha256'] = {'dashboard/config.js': hashes['dashboard'].pop('dashboard/config.js', None)}
     report['runtime_code_sha256'] = hashes
     # nginx base image retains its standard error page beside COPY dashboard.
     # Record that asset separately; it is not a stale file from our source tree.
@@ -392,16 +409,18 @@ def main():
     parser.add_argument('--ml-url', default='http://127.0.0.1:8001')
     parser.add_argument('--ndtp-host', default='127.0.0.1')
     parser.add_argument('--ndtp-port', type=int, default=9201)
-    parser.add_argument('--vehicles', type=int, default=40, choices=range(1, 129))
+    parser.add_argument('--vehicles', type=int, default=40)
     parser.add_argument('--rounds', type=int, default=24, choices=range(2, 61))
     parser.add_argument('--interval', type=float, default=1.)
-    parser.add_argument('--plan-visits', type=int, default=400, choices=range(2, 2001))
+    parser.add_argument('--plan-visits', type=int, default=400)
     parser.add_argument('--check-recovery', action='store_true')
     parser.add_argument('--restore', choices=('replay', 'demo'), default='replay')
     parser.add_argument('--out', type=Path, default=ROOT / 'artifacts/docker-load')
     args = parser.parse_args()
-    if not .1 <= args.interval <= 1.5 or args.vehicles * args.plan_visits > 20000:
-        parser.error('interval должен быть 0.1..1.5 с; vehicles × plan-visits ≤ 20000')
+    if not .1 <= args.interval <= 1.5:
+        parser.error('interval должен быть 0.1..1.5 с')
+    if args.vehicles < 1 or args.plan_visits < 2:
+        parser.error('Нужны хотя бы один автобус и два посещения в плане')
     args.out = args.out.resolve()
     args.out.mkdir(parents=True, exist_ok=True)
     report = dict(passed=False, started_at=datetime.now(timezone.utc).isoformat(),

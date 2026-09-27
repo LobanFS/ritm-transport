@@ -40,8 +40,8 @@ class Route(Contract):
     route_id: str
     name: str
     color: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
-    path: list[tuple[float, float]] = Field(min_length=2, max_length=10000)
-    stops: list[RouteStop] = Field(default_factory=list, max_length=500)
+    path: list[tuple[float, float]] = Field(min_length=2)
+    stops: list[RouteStop] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def coordinates(self):
@@ -79,10 +79,10 @@ class LiveContext(Contract):
     plan_timezone: str | None = Field(default=None, min_length=1, max_length=80)
     plan_complete: bool = Field(default=False, description='Передан весь доступный исходный план выбранных ТС, без обрезки по окну replay')
     arrival_mode: Literal['gps', 'external'] = Field(default='external', description='gps — экспериментальная оценка, не проверенный операционный источник; generator включает её отдельно')
-    vehicles: list[VehicleConfig] = Field(min_length=1, max_length=128)
-    routes: list[Route] = Field(default_factory=list, max_length=128)
-    schedule: list[ScheduledStop] = Field(default_factory=list, max_length=20000)
-    hints: list[DelayHint] = Field(default_factory=list, max_length=10000)
+    vehicles: list[VehicleConfig] = Field(min_length=1)
+    routes: list[Route] = Field(default_factory=list)
+    schedule: list[ScheduledStop] = Field(default_factory=list)
+    hints: list[DelayHint] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def references(self):
@@ -162,7 +162,7 @@ def gate_prediction(prediction: Prediction, *, telemetry_age_s: float | None,
 
 
 class Engine:
-    """Один worker: память ограничена 2048 событиями/ТС, 200 алертами, 128 ТС."""
+    """Один worker, без потолка числа ТС; история и журнал хранятся в кольцевых буферах."""
     def __init__(self, ml_url: str, client: httpx.AsyncClient | None = None, *, learning_store=None):
         self.ml_url = ml_url.rstrip("/")
         self.client = client
@@ -197,6 +197,7 @@ class Engine:
         self.incident_keys = deque(maxlen=200)
         self.vehicles = {}
         self.routes = []
+        self._line_memberships = None
         self.schedule = defaultdict(list)
         self.model_plans = {}
         self.plan_version = None
@@ -664,9 +665,15 @@ class Engine:
         try:
             if self.client is None:
                 raise RuntimeError("ML client not configured")
-            response = await self.client.post(self.ml_url+"/predict/batch", json=[r.model_dump(mode="json") for r in requests])
-            response.raise_for_status()
-            predictions = [Prediction.model_validate(p) for p in response.json()]
+            # Ограничение ML относится к одному HTTP-пакету, а не размеру парка.
+            predictions = []
+            for start in range(0, len(requests), 128):
+                response = await self.client.post(self.ml_url+"/predict/batch",
+                    json=[r.model_dump(mode="json") for r in requests[start:start+128]])
+                response.raise_for_status()
+                predictions.extend(Prediction.model_validate(p) for p in response.json())
+                if version != self.version:
+                    return  # Не посылаем остальные старые пакеты после смены контекста.
             if len(predictions) != len(requests) or any(p.request_id != r.request_id or p.tr_id != r.tr_id or p.target != r.target or p.issued_at != r.issued_at for p,r in zip(predictions,requests)):
                 raise ValueError("ML response does not match request")
             ml_status = "ok"
@@ -728,6 +735,9 @@ class Engine:
                     explanation=explanation.model_dump(mode="json")))
 
     def state(self):
+        if self._line_memberships is None:
+            from backend.line_identity import line_memberships
+            self._line_memberships = line_memberships([r.model_dump(mode='json') for r in self.routes])
         now = self.clock if self.mode in ('demo', 'replay', 'generator') else utcnow()
         producer_unavailable = self.generator is not None and not self.generator.check_progress()
         vehicles = []
@@ -798,7 +808,8 @@ class Engine:
                 source_status="disconnected" if producer_unavailable else "receiving" if any(v["status"]=="fresh" for v in vehicles) else "awaiting"),
             summary=dict(vehicles=len(vehicles),red=risks.count("red"),amber=risks.count("amber"),
                 stale=sum(v["status"]!="fresh" for v in vehicles),unknown=risks.count("unknown"),events=len(self.incidents)),
-            routes=[r.model_dump(mode="json") for r in self.routes],vehicles=vehicles,incidents=list(self.incidents),
+            routes=[r.model_dump(mode="json") for r in self.routes],line_memberships=self._line_memberships,
+            vehicles=vehicles,incidents=list(self.incidents),
             metrics={**self.metrics,"inference_p95_ms":round(p95,2) if p95 is not None else None,
                 "pipeline_p95_ms":round(pipeline_p95,2) if pipeline_p95 is not None else None,
                 "pipeline_cycles":self.pipeline_cycles})

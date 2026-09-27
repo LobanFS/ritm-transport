@@ -209,12 +209,12 @@ class NDTPServer:
         host: str = "0.0.0.0",
         port: int = 9201,
         *,
-        max_connections: int = 128,
+        max_connections: int = 0,
         idle_timeout: float = 30.0,
         callback_timeout: float = 10.0,
     ) -> None:
-        if max_connections < 1 or idle_timeout <= 0 or callback_timeout <= 0:
-            raise ValueError("Лимиты соединений и времени должны быть положительными")
+        if max_connections < 0 or idle_timeout <= 0 or callback_timeout <= 0:
+            raise ValueError("max_connections должен быть ≥0 (0 — без потолка); таймауты должны быть положительными")
         self.on_nav = on_nav
         self.on_error = on_error
         self.host = host
@@ -273,7 +273,7 @@ class NDTPServer:
             _LOGGER.exception("Ошибка callback on_error при обработке NDTP")
 
     def _accept(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-        if self._closing or len(self._writers) >= self.max_connections:
+        if self._closing or (self.max_connections and len(self._writers) >= self.max_connections):
             if not self._closing:
                 self._error("max_connections")
             writer.close()

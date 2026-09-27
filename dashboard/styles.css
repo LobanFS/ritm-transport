@@ -100,6 +100,7 @@ h1 { font-size: clamp(23px, 2.1vw, 30px); font-weight: 650; line-height: 1.3; le
 
 /* Map and operational queue. */
 .workspace { --map-toolbar-height: 68px; --fleet-width: 240px; position: relative; display: grid; grid-template-columns: minmax(0,1fr); gap: 16px; align-items: stretch; margin-bottom: 16px; }
+.workspace.is-fleet-hidden { --fleet-width: 0px; }
 .panel { min-width: 0; background: white; border: 1px solid var(--line); border-radius: 13px; box-shadow: var(--shadow); overflow: hidden; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 19px 20px; }
 .panel-heading h2 { font-size: 15px; font-weight: 650; line-height: 1.4; letter-spacing: -.15px; }
@@ -155,7 +156,8 @@ h1 { font-size: clamp(23px, 2.1vw, 30px); font-weight: 650; line-height: 1.3; le
 .bus-pin:not(.has-direction)::before { width: 12px; height: 12px; margin: 0 3px; clip-path: none; border-radius: 50%; }
 .bus-pin-code { display: block; min-width: 44px; padding: 0 5px; border: 1px solid #ffffffee; border-radius: 3px; background: var(--pin-color); color: var(--pin-text, white); font-size: 12px; font-weight: 750; letter-spacing: .1px; font-variant-numeric: tabular-nums; line-height: 22px; text-align: center; }
 .bus-pin-label { display: none; position: absolute; top: 39px; left: 26px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; padding: 2px 5px; border-radius: 3px; background: #fffffff0; color: #344d5c; font-size: 10px; font-weight: 600; white-space: nowrap; }
-.bus-map-marker.is-selected .bus-pin-code { box-shadow: 0 0 0 2px #244b68,0 0 0 4px #ffffffcc; }
+.bus-map-marker.is-line-member .bus-pin-code { box-shadow: 0 0 0 2px #4593ae,0 0 0 4px #ffffffde; }
+.bus-map-marker.is-selected .bus-pin-code { box-shadow: 0 0 0 3px #244b68,0 0 0 5px #ffffffee; }
 .bus-map-marker.is-selected .bus-pin-label, .bus-map-marker:hover .bus-pin-label, .bus-map-marker:focus-visible .bus-pin-label { display: block; }
 .bus-pin-label:empty { display: none !important; }
 
@@ -267,6 +269,8 @@ h4 { color: #3f6267; font-size: 12px; font-weight: 650; line-height: 1.5; }
 .lower-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: stretch; gap: 20px; margin-bottom: 22px; }
 .fleet-panel { position: absolute; z-index: 460; top: calc(var(--map-toolbar-height) + 14px); left: 14px; display: flex; flex-direction: column; width: var(--fleet-width); height: auto; max-height: calc(100% - var(--map-toolbar-height) - 28px); min-height: 0; box-shadow: 0 5px 24px #233d4520; }
 .fleet-panel .panel-heading { padding: 14px 12px; }
+.fleet-close { flex: none; width: 22px; min-height: 24px; padding: 0; border-radius: 4px; background: #eef5f2; color: #386b63; font-size: 20px; line-height: 1; }
+.fleet-panel .panel-heading { gap: 7px; }
 .fleet-panel .panel-heading h2 { font-size: 12px; }
 .fleet-panel .heading-inline { width: 100%; justify-content: space-between; gap: 5px; }
 .fleet-panel .count-chip { font-size: 10px; padding: 1px 5px; }
@@ -280,7 +284,8 @@ h4 { color: #3f6267; font-size: 12px; font-weight: 650; line-height: 1.5; }
 .fleet-table tr:last-child td { border-bottom: 0; }
 .fleet-table tbody tr { cursor: pointer; transition: background .15s; }
 .fleet-table tbody tr:hover { background: #f6faf7; }
-.fleet-table tbody tr.is-selected { background: #edf6ef; }
+.fleet-table tbody tr.is-line-member { background: #edf5fa; }
+.fleet-table tbody tr.is-selected { background: #dceee4; }
 .fleet-table .bus-name { display: block; color: #3f6565; font-size: 11px; font-weight: 600; line-height: 1.4; }
 .fleet-table .bus-id { display: block; margin-top: 3px; color: #71877f; font-size: 10px; }
 .fleet-table .delay-cell { font-size: 11px; line-height: 1.4; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -354,6 +359,8 @@ h4 { color: #3f6267; font-size: 12px; font-weight: 650; line-height: 1.5; }
   html { scroll-padding-top: 122px; }
   .main { padding: 0 22px 22px; }
   .workspace { grid-template-columns: 220px minmax(0,1fr); gap: 16px; }
+  .workspace.is-fleet-hidden { grid-template-columns: minmax(0,1fr); }
+  .workspace.is-fleet-hidden .vehicle-panel { grid-column: 1; }
   .attention-list { max-height: 440px; }
   .fleet-panel { position: static; grid-column: 1; width: auto; height: 100%; min-height: 300px; max-height: 690px; box-shadow: var(--shadow); }
   .table-scroll { min-height: 200px; }

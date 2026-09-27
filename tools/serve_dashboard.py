@@ -8,14 +8,25 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
+def import_limits():
+    limits = (int(os.getenv('RITM_IMPORT_MAX_BYTES', '268435456')),
+              int(os.getenv('RITM_IMPORT_TIMEOUT_SECONDS', '120')))
+    if any(value <= 0 for value in limits):
+        raise ValueError('Лимиты импорта должны быть положительными целыми числами')
+    return limits
+
+
 def dashboard_config(ui_mode):
     if ui_mode not in ('dispatcher', 'full'):
         raise ValueError('DASHBOARD_UI_MODE должен быть dispatcher или full')
-    return ('window.RITM_CONFIG = '+json.dumps({'uiMode':ui_mode})+';\n').encode('utf-8')
+    max_bytes, timeout = import_limits()
+    return ('window.RITM_CONFIG = '+json.dumps({'uiMode':ui_mode,
+        'importMaxBytes':max_bytes, 'importTimeoutSeconds':timeout})+';\n').encode('utf-8')
 
 
 def make_handler(backend, directory, ui_mode):
     config = dashboard_config(ui_mode)
+    max_bytes, import_timeout = import_limits()
     class Handler(SimpleHTTPRequestHandler):
         def __init__(self,*a,**kw): super().__init__(*a,directory=str(directory),**kw)
         def do_GET(self):
@@ -32,11 +43,12 @@ def make_handler(backend, directory, ui_mode):
         def do_POST(self): self.proxy()
         def proxy(self):
             length=int(self.headers.get('Content-Length','0'))
-            if length<0 or length>20_000_000: self.send_error(413); return
+            if length<0 or length>max_bytes: self.send_error(413); return
             body=self.rfile.read(length) if length else None
             req=Request(backend+self.path,data=body,method=self.command,headers={'Content-Type':self.headers.get('Content-Type','application/json')})
             try:
-                response=urlopen(req,timeout=5)
+                response=urlopen(req,timeout=import_timeout if self.path.split('?',1)[0] in
+                    ('/api/v1/replay/import', '/api/v1/replay/load', '/api/v1/live/context') else 5)
             except HTTPError as e: response=e
             except (URLError,TimeoutError): self.send_error(502,'Backend unavailable'); return
             with response:

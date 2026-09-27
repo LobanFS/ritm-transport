@@ -17,7 +17,7 @@ GROUPS = {
         "backend", "backend.app", "backend.engine", "backend.ndtp",
         "backend.arrivals", "backend.gps_arrivals", "backend.replay",
         "backend.diagnostics", "backend.segment_observations", "backend.risk_summary",
-        "backend.generator_bridge", "backend.learning_store", "backend.transfer_advisor",
+        "backend.generator_bridge", "backend.learning_store", "backend.transfer_advisor", "backend.line_identity",
     ],
     "ML-сервис": [
         "ml_service", "ml_service.app", "ml_service.learned", "ml_service.hybrid",

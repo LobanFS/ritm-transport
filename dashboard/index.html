@@ -71,6 +71,7 @@
             <label class="risk-checkbox"><input id="risk-amber" type="checkbox"><i class="dot amber" aria-hidden="true"></i><span>Под наблюдением</span></label>
           </div>
           <div class="map-actions" role="group" aria-label="Управление картой">
+            <button type="button" class="button" id="fleet-toggle" aria-controls="vehicles-section" aria-expanded="true">Скрыть список</button>
             <button type="button" class="button" id="map-focus">К автобусу</button>
             <button type="button" class="button" id="map-fit">Все автобусы</button>
             <button type="button" class="button" id="map-follow" aria-pressed="false">Следовать: выкл.</button>
@@ -92,7 +93,7 @@
 
 
       <article class="panel fleet-panel" id="vehicles-section" aria-label="Транспорт на карте">
-        <div class="panel-heading"><div class="heading-inline"><h2>Транспорт на линии</h2><span class="count-chip" id="table-count">0</span></div></div>
+        <div class="panel-heading"><div class="heading-inline"><h2>Транспорт на линии</h2><span class="count-chip" id="table-count">0</span></div><button type="button" class="fleet-close" id="fleet-close" aria-label="Скрыть список транспорта" title="Скрыть список">‹</button></div>
         <div class="table-scroll"><table class="fleet-table"><thead><tr><th scope="col">Автобус</th><th scope="col">Прогноз</th></tr></thead><tbody id="vehicle-table-body"></tbody></table></div>
         <div class="table-empty" id="table-empty">Транспорт пока не поступил в систему.</div>
       </article>
@@ -143,9 +144,9 @@
           <label class="filter-label"><span>Набор данных</span><select id="replay-split" aria-label="Набор данных replay"><option value="validate">validate · реальные ТС</option><option value="train">train · реальные и синтетические ТС</option><option value="custom">Свой архив</option></select></label>
           <label class="filter-label"><span>Текущее отклонение</span><select id="replay-source" aria-label="Источник отклонения replay"><option value="gps">Считать по GPS и плану</option><option value="csv_snapshot">Готовое из points.csv</option></select></label>
           <label class="filter-label"><span>Начало, UTC</span><input id="replay-start" type="datetime-local" value="2026-01-06T11:30" required></label>
-          <label class="filter-label"><span>История до начала, мин</span><input id="replay-warmup" type="number" min="0" max="120" step="1" value="30" required></label>
+          <label class="filter-label"><span>История до начала, мин</span><input id="replay-warmup" type="number" min="0" step="1" value="30" required></label>
           <label class="filter-label"><span>Автобусы</span><select id="replay-selection" aria-label="Выбор автобусов replay"><option value="all_available">Все доступные в архиве</option><option value="manual">Указать ID вручную</option></select></label>
-          <label class="filter-label"><span>ID через запятую · до 128</span><input id="replay-vehicles" type="text" placeholder="Например, 133300, 122048" disabled></label>
+          <label class="filter-label"><span>ID через запятую</span><input id="replay-vehicles" type="text" placeholder="Например, 133300, 122048" disabled></label>
           <label class="filter-label"><span>Часовой пояс исходных CSV</span><select id="replay-timezone"><option value="UTC">UTC · принято для раздачи</option><option value="Europe/Moscow">Europe/Moscow</option></select></label>
           <button type="submit" class="button primary" id="replay-load">Загрузить на паузе</button>
         </form>

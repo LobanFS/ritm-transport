@@ -1,12 +1,12 @@
 {
-  "checked_at": "2026-09-27T17:42:21.636561+00:00",
+  "checked_at": "2026-09-27T18:09:39.941893+00:00",
   "python_tests": {
-    "passed": 712,
+    "passed": 741,
     "failed": 0,
-    "note": "699 passed in sandbox; 13 TCP tests repeated with local socket permission. All 48 NDTP checks passed."
+    "note": "Full suite with local TCP sockets enabled; 10.52 s. Includes 129 concurrent NDTP clients, 257-vehicle ML batching and atomic archive timeout."
   },
   "dashboard_checks": {
-    "passed": 70,
+    "passed": 79,
     "browser": {
       "map_controls_on_left": false,
       "neutral_route_and_stops": false,
@@ -32,10 +32,18 @@
       "fleet_two_columns": true,
       "transfer_real_archive": true,
       "transfer_focus_preserves_target": true,
-      "transfer_hidden_when_not_needed": true
+      "transfer_hidden_when_not_needed": true,
+      "fleet_collapsible": true,
+      "fleet_default_open": true,
+      "fleet_stays_collapsed_across_polling": true,
+      "same_line_highlight": true,
+      "selected_line_preserved_under_search": true,
+      "switch_selected_line_updates_highlights": true,
+      "collapse_no_empty_column": true
     },
     "geometry_checks": 13,
-    "transfer_checks": 13
+    "transfer_checks": 13,
+    "fleet_checks": 9
   },
   "docker_start": {
     "train": true,
@@ -191,6 +199,40 @@
       "Vehicle load, reserve, driver shifts and permission to reassign require dispatcher confirmation.",
       "Similar plans are grouped geometrically; actual route IDs are absent in bundled CSV.",
       "Improvement applies to service at one target stop, not a new ML prediction or network-wide optimization."
+    ]
+  },
+  "fleet_limits": {
+    "fixed_vehicle_cap": null,
+    "fixed_plan_visits_cap": null,
+    "fixed_archive_rows_cap": null,
+    "ndtp_default_connection_cap": null,
+    "ml_batch_size": 128,
+    "checked_ml_requests": 257,
+    "checked_ml_batch_sizes": [
+      128,
+      128,
+      1
+    ],
+    "ml_test_scope": "Mock HTTP responses; batching, fallback and context isolation, not throughput of the trained model.",
+    "checked_tcp_clients": 129,
+    "checked_custom_archive": {
+      "vehicles": 129,
+      "visits": 20124
+    },
+    "import_default_max_bytes": 268435456,
+    "import_default_timeout_s": 120,
+    "configurable_import_budget": true,
+    "archive_timeout_preserves_context": true,
+    "line_grouping": {
+      "train_plans": 39,
+      "groups": 13,
+      "plans_per_group": 3,
+      "matching": ">=80% unique coordinates of both plans within 80 m; direct geometric similarity, not authoritative route IDs"
+    },
+    "limitations": [
+      "Finite RAM, CPU, OS sockets and HTTP budgets still apply.",
+      "Per-request ML batches, protocol frame limits and bounded operational journals are retained.",
+      "Existing 40-vehicle Docker performance result above is from its recorded timestamp; these scale boundary tests do not establish a new throughput figure."
     ]
   }
 }

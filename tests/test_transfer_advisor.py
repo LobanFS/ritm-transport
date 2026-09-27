@@ -121,7 +121,15 @@ def test_small_coordinate_jitter_same_line_but_crossing_lines_different(inputs):
     assert not same_line(a, b)
     shifted = {**b, 'path': [[x+.0001, y+.0001] for x, y in a['path']]}
     assert same_line(a, shifted)
-    assert same_line(a, {'route_id': 'missing', 'path': []})
+    assert not same_line(a, {'route_id': 'missing', 'path': []})
+
+
+def test_missing_geometry_does_not_turn_unknown_plan_into_a_donor(inputs):
+    state, plan = inputs
+    state['routes'][1]['path'] = []
+    assert advise_transfer(state, plan, 1).donor.tr_id == 3
+    state['routes'][0]['path'] = []
+    assert advise_transfer(state, plan, 1).status == 'unavailable'
 
 
 def test_unusable_relocation_and_distant_bus_do_not_get_advice(inputs):

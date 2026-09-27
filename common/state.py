@@ -163,6 +163,8 @@ class DashboardState(Contract):
     health: HealthState
     summary: Summary
     routes: list[Route]
+    line_memberships: dict[str, list[str]] = Field(default_factory=dict,
+        description='Для каждого плана — непосредственно совпадающие линии по ID или геометрии; без транзитивного объединения пересечений')
     vehicles: list[VehicleView]
     incidents: list[Incident]
     metrics: Metrics

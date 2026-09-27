@@ -27,7 +27,8 @@ UI_MODES = ('dispatcher', 'full')
 def json_api(base, path, payload=None):
     request = Request(base+path, data=None if payload is None else json.dumps(payload).encode(),
                       headers={'Content-Type':'application/json'})
-    with urlopen(request, timeout=45) as response:
+    timeout = int(os.getenv('RITM_IMPORT_TIMEOUT_SECONDS', '120')) + 10 if path == '/api/v1/replay/load' else 45
+    with urlopen(request, timeout=timeout) as response:
         return json.load(response)
 
 

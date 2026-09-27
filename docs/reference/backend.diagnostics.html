@@ -14,14 +14,14 @@
 <table class="section">
 <tr class="decor pkg-content-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
-    
+
 <tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><table><tr><td class="multicolumn">math<br>
 </td><td class="multicolumn"></td><td class="multicolumn"></td><td class="multicolumn"></td></tr></table></td></tr></table><p>
 <table class="section">
 <tr class="decor index-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Classes</strong></td></tr>
-    
+
 <tr><td class="decor index-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><dl>
 <dt class="heading-text"><a href="common.contracts.html#Contract">common.contracts.Contract</a>(pydantic.main.BaseModel)
@@ -36,7 +36,7 @@
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="Explanation">class <strong>Explanation</strong></a>(<a href="common.contracts.html#Contract">common.contracts.Contract</a>)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#Explanation">Explanation</a>(*,&nbsp;evaluated_at:&nbsp;pydantic.types.AwareDatetime,&nbsp;cause_status:&nbsp;Literal['hypothesis',&nbsp;'unknown'],&nbsp;possible_cause:&nbsp;str,&nbsp;observations:&nbsp;list[backend.diagnostics.<a href="#Observation">Observation</a>],&nbsp;recommendation:&nbsp;str,&nbsp;summary:&nbsp;str&nbsp;=&nbsp;'Недостаточно&nbsp;наблюдений',&nbsp;observation_status:&nbsp;Literal['observed',&nbsp;'no_pattern',&nbsp;'insufficient_data']&nbsp;=&nbsp;'insufficient_data',&nbsp;rule_version:&nbsp;str&nbsp;=&nbsp;'telemetry-rules-v2')&nbsp;-&amp;gt;&nbsp;None<br>
 &nbsp;<br>
@@ -62,7 +62,7 @@ Data and other attributes defined here:<br>
 
 <dl><dt><strong>__pydantic_computed_fields__</strong> = {}</dl>
 
-<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'backend.diagnostics.Explanation'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'Explanation'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'backend.diagnostics.Explanation'&gt;&gt;]}, 'ref': 'backend.diagnostics.Explanation:37253656592', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'cause_status': {'metadata': {}, 'schema': {'expected': ['hypothesis', 'unknown'], 'type': 'literal'}, 'type': 'model-field'}, 'evaluated_at': {'metadata': {}, 'schema': {'microseconds_precision': 'truncate', 'type': 'datetime', 'tz_constraint': 'aware'}, 'type': 'model-field'}, 'observation_status': {'metadata': {}, 'schema': {'default': 'insufficient_data', 'schema': {'expected': [...], 'type': 'literal'}, 'type': 'default'}, 'type': 'model-field'}, 'observations': {'metadata': {}, 'schema': {'items_schema': {'cls': &lt;class 'backend.diagnostics.Observation'&gt;, 'config': {...}, 'custom_init': False, 'metadata': {...}, 'ref': 'backend.diagnostics.Observation:37253655568', 'root_model': False, 'schema': {...}, 'type': 'model'}, 'type': 'list'}, 'type': 'model-field'}, 'possible_cause': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}, 'recommendation': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}, 'rule_version': {'metadata': {}, 'schema': {'default': 'telemetry-rules-v2', 'schema': {'type': 'str'}, 'type': 'default'}, 'type': 'model-field'}, 'summary': {'metadata': {}, 'schema': {'default': 'Недостаточно наблюдений', 'schema': {'type': 'str'}, 'type': 'default'}, 'type': 'model-field'}}, 'model_name': 'Explanation', 'type': 'model-fields'}, 'type': 'model'}</dl>
+<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'backend.diagnostics.Explanation'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'Explanation'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'backend.diagnostics.Explanation'&gt;&gt;]}, 'ref': 'backend.diagnostics.Explanation:53352085520', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'cause_status': {'metadata': {}, 'schema': {'expected': ['hypothesis', 'unknown'], 'type': 'literal'}, 'type': 'model-field'}, 'evaluated_at': {'metadata': {}, 'schema': {'microseconds_precision': 'truncate', 'type': 'datetime', 'tz_constraint': 'aware'}, 'type': 'model-field'}, 'observation_status': {'metadata': {}, 'schema': {'default': 'insufficient_data', 'schema': {'expected': [...], 'type': 'literal'}, 'type': 'default'}, 'type': 'model-field'}, 'observations': {'metadata': {}, 'schema': {'items_schema': {'cls': &lt;class 'backend.diagnostics.Observation'&gt;, 'config': {...}, 'custom_init': False, 'metadata': {...}, 'ref': 'backend.diagnostics.Observation:53352084496', 'root_model': False, 'schema': {...}, 'type': 'model'}, 'type': 'list'}, 'type': 'model-field'}, 'possible_cause': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}, 'recommendation': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}, 'rule_version': {'metadata': {}, 'schema': {'default': 'telemetry-rules-v2', 'schema': {'type': 'str'}, 'type': 'default'}, 'type': 'model-field'}, 'summary': {'metadata': {}, 'schema': {'default': 'Недостаточно наблюдений', 'schema': {'type': 'str'}, 'type': 'default'}, 'type': 'model-field'}}, 'model_name': 'Explanation', 'type': 'model-fields'}, 'type': 'model'}</dl>
 
 <dl><dt><strong>__pydantic_custom_init__</strong> = False</dl>
 
@@ -484,7 +484,7 @@ Data and other attributes inherited from pydantic.main.BaseModel:<br>
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="Observation">class <strong>Observation</strong></a>(<a href="common.contracts.html#Contract">common.contracts.Contract</a>)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#Observation">Observation</a>(*,&nbsp;code:&nbsp;str,&nbsp;title:&nbsp;str,&nbsp;evidence:&nbsp;str,&nbsp;kind:&nbsp;Literal['movement',&nbsp;'data_quality',&nbsp;'schedule'])&nbsp;-&amp;gt;&nbsp;None<br>
 &nbsp;<br>
@@ -510,7 +510,7 @@ Data and other attributes defined here:<br>
 
 <dl><dt><strong>__pydantic_computed_fields__</strong> = {}</dl>
 
-<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'backend.diagnostics.Observation'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'Observation'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'backend.diagnostics.Observation'&gt;&gt;]}, 'ref': 'backend.diagnostics.Observation:37253655568', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'code': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}, 'evidence': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}, 'kind': {'metadata': {}, 'schema': {'expected': ['movement', 'data_quality', 'schedule'], 'type': 'literal'}, 'type': 'model-field'}, 'title': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}}, 'model_name': 'Observation', 'type': 'model-fields'}, 'type': 'model'}</dl>
+<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'backend.diagnostics.Observation'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'Observation'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'backend.diagnostics.Observation'&gt;&gt;]}, 'ref': 'backend.diagnostics.Observation:53352084496', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'code': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}, 'evidence': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}, 'kind': {'metadata': {}, 'schema': {'expected': ['movement', 'data_quality', 'schedule'], 'type': 'literal'}, 'type': 'model-field'}, 'title': {'metadata': {}, 'schema': {'type': 'str'}, 'type': 'model-field'}}, 'model_name': 'Observation', 'type': 'model-fields'}, 'type': 'model'}</dl>
 
 <dl><dt><strong>__pydantic_custom_init__</strong> = False</dl>
 
@@ -932,7 +932,7 @@ Data and other attributes inherited from pydantic.main.BaseModel:<br>
 <table class="section">
 <tr class="decor functions-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
-    
+
 <tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><dl><dt><a name="-explain"><strong>explain</strong></a>(history, at: datetime.datetime, *, current_deviation: backend.arrivals.CurrentDeviation | None = None, deviation_history=(), schedule: list[common.contracts.StopTarget] | tuple[common.contracts.StopTarget, ...] = ()) -&gt; backend.diagnostics.Explanation</dt><dd><span class="code">Наблюдаемые&nbsp;движение&nbsp;и&nbsp;отклонение&nbsp;отдельно&nbsp;от&nbsp;гипотезы&nbsp;о&nbsp;причине.<br>
 &nbsp;<br>
@@ -947,7 +947,7 @@ Data and other attributes inherited from pydantic.main.BaseModel:<br>
 <table class="section">
 <tr class="decor data-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
-    
+
 <tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><strong>Literal</strong> = typing.Literal</td></tr></table>
 </body></html>

@@ -21,7 +21,7 @@
 <table class="section">
 <tr class="decor pkg-content-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
-    
+
 <tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><table><tr><td class="multicolumn">asyncio<br>
 </td><td class="multicolumn">hashlib<br>
@@ -31,7 +31,7 @@
 <table class="section">
 <tr class="decor index-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Classes</strong></td></tr>
-    
+
 <tr><td class="decor index-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><dl>
 <dt class="heading-text">builtins.ValueError(builtins.Exception)
@@ -52,7 +52,7 @@
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="NDTPError">class <strong>NDTPError</strong></a>(builtins.ValueError)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#NDTPError">NDTPError</a>(reason:&nbsp;'str',&nbsp;detail:&nbsp;'str'&nbsp;=&nbsp;'')&nbsp;-&amp;gt;&nbsp;'None'<br>
 &nbsp;<br>
@@ -116,9 +116,9 @@ Data descriptors inherited from builtins.BaseException:<br>
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="NDTPServer">class <strong>NDTPServer</strong></a>(builtins.object)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
-<td class="decor title-decor" colspan=2><span class="code"><a href="#NDTPServer">NDTPServer</a>(on_nav:&nbsp;'Callable[[int,&nbsp;dict],&nbsp;Awaitable[None]]',&nbsp;on_error:&nbsp;'Callable[[str],&nbsp;None]',&nbsp;host:&nbsp;'str'&nbsp;=&nbsp;'0.0.0.0',&nbsp;port:&nbsp;'int'&nbsp;=&nbsp;9201,&nbsp;*,&nbsp;max_connections:&nbsp;'int'&nbsp;=&nbsp;128,&nbsp;idle_timeout:&nbsp;'float'&nbsp;=&nbsp;30.0,&nbsp;callback_timeout:&nbsp;'float'&nbsp;=&nbsp;10.0)&nbsp;-&amp;gt;&nbsp;'None'<br>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#NDTPServer">NDTPServer</a>(on_nav:&nbsp;'Callable[[int,&nbsp;dict],&nbsp;Awaitable[None]]',&nbsp;on_error:&nbsp;'Callable[[str],&nbsp;None]',&nbsp;host:&nbsp;'str'&nbsp;=&nbsp;'0.0.0.0',&nbsp;port:&nbsp;'int'&nbsp;=&nbsp;9201,&nbsp;*,&nbsp;max_connections:&nbsp;'int'&nbsp;=&nbsp;0,&nbsp;idle_timeout:&nbsp;'float'&nbsp;=&nbsp;30.0,&nbsp;callback_timeout:&nbsp;'float'&nbsp;=&nbsp;10.0)&nbsp;-&amp;gt;&nbsp;'None'<br>
 &nbsp;<br>
 Принимает&nbsp;NDTP&nbsp;с&nbsp;ограничениями&nbsp;памяти,&nbsp;соединений&nbsp;и&nbsp;времени&nbsp;ожидания.<br>
 &nbsp;<br>
@@ -129,7 +129,7 @@ on_nav&nbsp;вызывается&nbsp;последовательно&nbsp;в&nbs
 После&nbsp;каждого&nbsp;reconnect&nbsp;требуется&nbsp;новый&nbsp;корректный&nbsp;handshake.<br>&nbsp;</span></td></tr>
 <tr><td>&nbsp;</td>
 <td class="singlecolumn">Methods defined here:<br>
-<dl><dt><a name="NDTPServer-__init__"><strong>__init__</strong></a>(self, on_nav: 'Callable[[int, dict], Awaitable[None]]', on_error: 'Callable[[str], None]', host: 'str' = '0.0.0.0', port: 'int' = 9201, *, max_connections: 'int' = 128, idle_timeout: 'float' = 30.0, callback_timeout: 'float' = 10.0) -&gt; 'None'</dt><dd><span class="code">Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</span></dd></dl>
+<dl><dt><a name="NDTPServer-__init__"><strong>__init__</strong></a>(self, on_nav: 'Callable[[int, dict], Awaitable[None]]', on_error: 'Callable[[str], None]', host: 'str' = '0.0.0.0', port: 'int' = 9201, *, max_connections: 'int' = 0, idle_timeout: 'float' = 30.0, callback_timeout: 'float' = 10.0) -&gt; 'None'</dt><dd><span class="code">Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</span></dd></dl>
 
 <dl><dt>async <a name="NDTPServer-close"><strong>close</strong></a>(self) -&gt; 'None'</dt><dd><span class="code">Останавливает&nbsp;приём,&nbsp;закрывает&nbsp;сокеты&nbsp;и&nbsp;дожидается&nbsp;обработчиков.</span></dd></dl>
 
@@ -152,7 +152,7 @@ Data descriptors defined here:<br>
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="ParsedFrame">class <strong>ParsedFrame</strong></a>(builtins.object)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#ParsedFrame">ParsedFrame</a>(unit_id:&nbsp;'int',&nbsp;kind:&nbsp;"Literal['handshake',&nbsp;'realtime']",&nbsp;nav:&nbsp;'dict&nbsp;|&nbsp;None')&nbsp;-&amp;gt;&nbsp;None<br>
 &nbsp;<br>
@@ -200,7 +200,7 @@ Data and other attributes defined here:<br>
 <table class="section">
 <tr class="decor functions-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
-    
+
 <tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><dl><dt><a name="-crc16_modbus"><strong>crc16_modbus</strong></a>(data: 'bytes') -&gt; 'int'</dt><dd><span class="code">Вычисляет&nbsp;CRC-16/Modbus&nbsp;до&nbsp;перестановки&nbsp;байтов&nbsp;для&nbsp;заголовка&nbsp;NPL.</span></dd></dl>
  <dl><dt><a name="-parse_frame"><strong>parse_frame</strong></a>(frame: 'bytes') -&gt; 'ParsedFrame'</dt><dd><span class="code">Разбирает&nbsp;один&nbsp;полный&nbsp;кадр;&nbsp;при&nbsp;любой&nbsp;ошибке&nbsp;поднимает&nbsp;<a href="#NDTPError">NDTPError</a>.<br>
@@ -214,7 +214,7 @@ Data and other attributes defined here:<br>
 <table class="section">
 <tr class="decor data-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
-    
+
 <tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><strong>Literal</strong> = typing.Literal<br>
 <strong>MAX_FRAME_SIZE</strong> = 65535<br>

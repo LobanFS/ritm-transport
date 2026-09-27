@@ -18,7 +18,7 @@
 <table class="section">
 <tr class="decor pkg-content-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
-    
+
 <tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><table><tr><td class="multicolumn">math<br>
 </td><td class="multicolumn">random<br>
@@ -27,7 +27,7 @@
 <table class="section">
 <tr class="decor index-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Classes</strong></td></tr>
-    
+
 <tr><td class="decor index-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><dl>
 <dt class="heading-text">builtins.object
@@ -49,7 +49,7 @@
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="ControlRequest">class <strong>ControlRequest</strong></a>(<a href="common.contracts.html#Contract">common.contracts.Contract</a>)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#ControlRequest">ControlRequest</a>(*,&nbsp;action:&nbsp;Literal['pause',&nbsp;'resume',&nbsp;'speed'],&nbsp;speed:&nbsp;Annotated[float&nbsp;|&nbsp;None,&nbsp;Ge(ge=1),&nbsp;Le(le=30)]&nbsp;=&nbsp;None)&nbsp;-&amp;gt;&nbsp;None<br>
 &nbsp;<br>
@@ -75,7 +75,7 @@ Data and other attributes defined here:<br>
 
 <dl><dt><strong>__pydantic_computed_fields__</strong> = {}</dl>
 
-<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'generator.scenarios.ControlRequest'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'ControlRequest'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_sche... of &lt;class 'generator.scenarios.ControlRequest'&gt;&gt;]}, 'ref': 'generator.scenarios.ControlRequest:37246063632', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'action': {'metadata': {}, 'schema': {'expected': ['pause', 'resume', 'speed'], 'type': 'literal'}, 'type': 'model-field'}, 'speed': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}}, 'model_name': 'ControlRequest', 'type': 'model-fields'}, 'type': 'model'}</dl>
+<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'generator.scenarios.ControlRequest'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'ControlRequest'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_sche... of &lt;class 'generator.scenarios.ControlRequest'&gt;&gt;]}, 'ref': 'generator.scenarios.ControlRequest:53352933392', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'action': {'metadata': {}, 'schema': {'expected': ['pause', 'resume', 'speed'], 'type': 'literal'}, 'type': 'model-field'}, 'speed': {'metadata': {}, 'schema': {'default': None, 'schema': {'schema': {...}, 'type': 'nullable'}, 'type': 'default'}, 'type': 'model-field'}}, 'model_name': 'ControlRequest', 'type': 'model-fields'}, 'type': 'model'}</dl>
 
 <dl><dt><strong>__pydantic_custom_init__</strong> = False</dl>
 
@@ -497,7 +497,7 @@ Data and other attributes inherited from pydantic.main.BaseModel:<br>
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="GeneratorSession">class <strong>GeneratorSession</strong></a>(builtins.object)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#GeneratorSession">GeneratorSession</a>(config:&nbsp;'<a href="#ResetRequest">ResetRequest</a>')<br>
 &nbsp;<br>
@@ -532,7 +532,7 @@ Data descriptors defined here:<br>
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="ResetRequest">class <strong>ResetRequest</strong></a>(<a href="common.contracts.html#Contract">common.contracts.Contract</a>)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#ResetRequest">ResetRequest</a>(*,&nbsp;scenario:&nbsp;Literal['normal',&nbsp;'slow_segment',&nbsp;'long_stop',&nbsp;'gps_loss']&nbsp;=&nbsp;'normal',&nbsp;seed:&nbsp;Annotated[int,&nbsp;Ge(ge=0),&nbsp;Le(le=2147483647)]&nbsp;=&nbsp;42,&nbsp;speed:&nbsp;Annotated[float,&nbsp;Ge(ge=1),&nbsp;Le(le=30)]&nbsp;=&nbsp;10,&nbsp;paused:&nbsp;bool&nbsp;=&nbsp;True,&nbsp;route_count:&nbsp;Annotated[int,&nbsp;Ge(ge=1),&nbsp;Le(le=20)]&nbsp;=&nbsp;4,&nbsp;telemetry_interval_s:&nbsp;Annotated[int,&nbsp;Ge(ge=1),&nbsp;Le(le=30)]&nbsp;=&nbsp;15,&nbsp;door_sensors:&nbsp;Annotated[bool,&nbsp;Strict(strict=True)]&nbsp;=&nbsp;False)&nbsp;-&amp;gt;&nbsp;None<br>
 &nbsp;<br>
@@ -558,7 +558,7 @@ Data and other attributes defined here:<br>
 
 <dl><dt><strong>__pydantic_computed_fields__</strong> = {}</dl>
 
-<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'generator.scenarios.ResetRequest'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'ResetRequest'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'generator.scenarios.ResetRequest'&gt;&gt;]}, 'ref': 'generator.scenarios.ResetRequest:37246062608', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'door_sensors': {'metadata': {}, 'schema': {'default': False, 'schema': {'strict': True, 'type': 'bool'}, 'type': 'default'}, 'type': 'model-field'}, 'paused': {'metadata': {}, 'schema': {'default': True, 'schema': {'type': 'bool'}, 'type': 'default'}, 'type': 'model-field'}, 'route_count': {'metadata': {}, 'schema': {'default': 4, 'schema': {'ge': 1, 'le': 20, 'type': 'int'}, 'type': 'default'}, 'type': 'model-field'}, 'scenario': {'metadata': {}, 'schema': {'default': 'normal', 'schema': {'expected': [...], 'type': 'literal'}, 'type': 'default'}, 'type': 'model-field'}, 'seed': {'metadata': {}, 'schema': {'default': 42, 'schema': {'ge': 0, 'le': 2147483647, 'type': 'int'}, 'type': 'default'}, 'type': 'model-field'}, 'speed': {'metadata': {}, 'schema': {'default': 10, 'schema': {'ge': 1, 'le': 30, 'type': 'float'}, 'type': 'default'}, 'type': 'model-field'}, 'telemetry_interval_s': {'metadata': {}, 'schema': {'default': 15, 'schema': {'ge': 1, 'le': 30, 'type': 'int'}, 'type': 'default'}, 'type': 'model-field'}}, 'model_name': 'ResetRequest', 'type': 'model-fields'}, 'type': 'model'}</dl>
+<dl><dt><strong>__pydantic_core_schema__</strong> = {'cls': &lt;class 'generator.scenarios.ResetRequest'&gt;, 'config': {'allow_inf_nan': False, 'extra_fields_behavior': 'forbid', 'title': 'ResetRequest'}, 'custom_init': False, 'metadata': {'pydantic_js_functions': [&lt;bound method BaseModel.__get_pydantic_json_schema__ of &lt;class 'generator.scenarios.ResetRequest'&gt;&gt;]}, 'ref': 'generator.scenarios.ResetRequest:53352932368', 'root_model': False, 'schema': {'computed_fields': [], 'fields': {'door_sensors': {'metadata': {}, 'schema': {'default': False, 'schema': {'strict': True, 'type': 'bool'}, 'type': 'default'}, 'type': 'model-field'}, 'paused': {'metadata': {}, 'schema': {'default': True, 'schema': {'type': 'bool'}, 'type': 'default'}, 'type': 'model-field'}, 'route_count': {'metadata': {}, 'schema': {'default': 4, 'schema': {'ge': 1, 'le': 20, 'type': 'int'}, 'type': 'default'}, 'type': 'model-field'}, 'scenario': {'metadata': {}, 'schema': {'default': 'normal', 'schema': {'expected': [...], 'type': 'literal'}, 'type': 'default'}, 'type': 'model-field'}, 'seed': {'metadata': {}, 'schema': {'default': 42, 'schema': {'ge': 0, 'le': 2147483647, 'type': 'int'}, 'type': 'default'}, 'type': 'model-field'}, 'speed': {'metadata': {}, 'schema': {'default': 10, 'schema': {'ge': 1, 'le': 30, 'type': 'float'}, 'type': 'default'}, 'type': 'model-field'}, 'telemetry_interval_s': {'metadata': {}, 'schema': {'default': 15, 'schema': {'ge': 1, 'le': 30, 'type': 'int'}, 'type': 'default'}, 'type': 'model-field'}}, 'model_name': 'ResetRequest', 'type': 'model-fields'}, 'type': 'model'}</dl>
 
 <dl><dt><strong>__pydantic_custom_init__</strong> = False</dl>
 
@@ -980,7 +980,7 @@ Data and other attributes inherited from pydantic.main.BaseModel:<br>
 <table class="section">
 <tr class="decor title-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><a name="Visit">class <strong>Visit</strong></a>(builtins.object)</td></tr>
-    
+
 <tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
 <td class="decor title-decor" colspan=2><span class="code"><a href="#Visit">Visit</a>(target:&nbsp;'StopTarget',&nbsp;arrival:&nbsp;'datetime',&nbsp;departure:&nbsp;'datetime',&nbsp;approach:&nbsp;'tuple[tuple[float,&nbsp;float],&nbsp;...]')&nbsp;-&amp;gt;&nbsp;None<br>
 &nbsp;<br>
@@ -1021,7 +1021,7 @@ Data and other attributes defined here:<br>
 <table class="section">
 <tr class="decor functions-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
-    
+
 <tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><dl><dt><a name="-expand_path"><strong>expand_path</strong></a>(corners: 'list[tuple[int, int]]') -&gt; 'list[tuple[int, int]]'</dt><dd><span class="code">Разбить&nbsp;ортогональную&nbsp;улицу&nbsp;на&nbsp;одинаковые&nbsp;блоки&nbsp;без&nbsp;срезания&nbsp;углов.</span></dd></dl>
  <dl><dt><a name="-grid_coordinate"><strong>grid_coordinate</strong></a>(point: 'tuple[int, int]') -&gt; 'tuple[float, float]'</dt></dl>
@@ -1031,7 +1031,7 @@ Data and other attributes defined here:<br>
 <table class="section">
 <tr class="decor data-decor heading-text">
 <td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
-    
+
 <tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
 <td class="singlecolumn"><strong>COLORS</strong> = ['#4169e1', '#16a085', '#b45bd2', '#d97524', '#cf4369', '#2584a0', '#817628', '#734dbc']<br>
 <strong>DURATION_S</strong> = 1800<br>

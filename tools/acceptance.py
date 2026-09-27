@@ -392,20 +392,20 @@ async def run(args, out, report):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--vehicles', type=int, default=32, choices=range(1, 129), metavar='1..128')
+    parser.add_argument('--vehicles', type=int, default=32)
     parser.add_argument('--rounds', type=int, default=24, choices=range(2, 61), metavar='2..60')
     parser.add_argument('--interval', type=float, default=1.)
     parser.add_argument('--out', type=Path, default=ROOT/'artifacts'/'acceptance')
     parser.add_argument('--model-path', type=Path, help='Проверенный frozen model.joblib; без опции проверяется persistence baseline')
-    parser.add_argument('--plan-visits', type=int, choices=range(2, 2001), default=2, metavar='2..2000',
+    parser.add_argument('--plan-visits', type=int, default=2,
                         help='Полный искусственный план на ТС; 400 близко к размеру выданного плана')
     args = parser.parse_args()
     if not .1 <= args.interval <= 1.5:
         parser.error('--interval: от 0.1 до 1.5 секунды (весь сценарий должен оставаться в горизонте и TTL подсказки)')
     if args.model_path is not None and not args.model_path.is_file():
         parser.error('--model-path: файл не найден; сначала tools/prepare_model.py')
-    if args.vehicles * args.plan_visits > 20000:
-        parser.error('--vehicles × --plan-visits превышает API limit 20000 посещений')
+    if args.vehicles < 1 or args.plan_visits < 2:
+        parser.error('Нужны хотя бы один автобус и два посещения в плане')
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
     report = dict(result='failed', checked_at=now().isoformat(), environment=f'{platform.platform()} / Python {platform.python_version()}',

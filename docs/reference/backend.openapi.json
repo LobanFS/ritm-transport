@@ -220,7 +220,7 @@
           "Исторический replay"
         ],
         "summary": "Replay Load",
-        "description": "Загрузить validate/train из REPLAY_DATA_DIR или ранее импортированный custom.\n\nИз train/schedule.csv используются только плановые поля. labels и\nфактические прибытия не становятся входами детектора или модели.\n\ntr_ids=null выбирает все ТС с планом и сообщениями в срезе с прогревом.\nЯвный список — ручной выбор до 128 ТС. Счётчики и будущие времена\nв replay.streams служат только диагностикой очереди проигрывателя.\n\nduration_minutes=null (по умолчанию) читает до последней доставки\nвыбранного архива: max(event_time, receive_time) для GPS, T для CSV.\nЯвное число ограничивает окно сверху. Пустой хвост не проигрывается.\nПо умолчанию начинает с паузы. Загрузка очищает текущий контекст только\nпосле успешной проверки CSV. Пути файлов через API не задаются.",
+        "description": "Загрузить validate/train из REPLAY_DATA_DIR или ранее импортированный custom.\n\nИз train/schedule.csv используются только плановые поля. labels и\nфактические прибытия не становятся входами детектора или модели.\n\ntr_ids=null выбирает все ТС с планом и сообщениями в срезе с прогревом.\nЯвный список — ручной выбор ТС. Счётчики и будущие времена\nв replay.streams служат только диагностикой очереди проигрывателя.\n\nduration_minutes=null (по умолчанию) читает до последней доставки\nвыбранного архива: max(event_time, receive_time) для GPS, T для CSV.\nЯвное число ограничивает окно сверху. Пустой хвост не проигрывается.\nПо умолчанию начинает с паузы. Загрузка очищает текущий контекст только\nпосле успешной проверки CSV. Пути файлов через API не задаются.",
         "operationId": "replay_load_api_v1_replay_load_post",
         "requestBody": {
           "content": {
@@ -280,7 +280,7 @@
           "Исторический replay"
         ],
         "summary": "Replay Import",
-        "description": "Проверить CSV и активировать custom на паузе, с GPS и началом по данным.\n\nВесь JSON ограничен 80 MiB; приём и обработка — по 30 секунд.\nМаксимум 500000 строк traffic+points, 20000 строк плана, 128 ТС.\nИмена файлов фиксированы. Bundled train/validate не изменяются.\nОшибка оставляет прежний контекст и прежний custom; импорт удаляется\nпосле перезапуска backend. points необязателен и включается только\nотдельным /replay/load с deviation_source=csv_snapshot.",
+        "description": "Проверить CSV и активировать custom на паузе, с GPS и началом по данным.\n\nЧисло ТС, событий и посещений не ограничено продуктовым потолком.\nРазмер JSON и время обработки задаются RITM_IMPORT_MAX_BYTES и\nRITM_IMPORT_TIMEOUT_SECONDS (по умолчанию 256 MiB и 120 секунд).\nИмена файлов фиксированы. Bundled train/validate не изменяются.\nОшибка оставляет прежний контекст и прежний custom; импорт удаляется\nпосле перезапуска backend. points необязателен и включается только\nотдельным /replay/load с deviation_source=csv_snapshot.",
         "operationId": "replay_import_api_v1_replay_import_post",
         "requestBody": {
           "content": {
@@ -910,6 +910,17 @@
             },
             "type": "array",
             "title": "Routes"
+          },
+          "line_memberships": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Line Memberships",
+            "description": "Для каждого плана — непосредственно совпадающие линии по ID или геометрии; без транзитивного объединения пересечений"
           },
           "vehicles": {
             "items": {
@@ -2020,7 +2031,6 @@
               "$ref": "#/components/schemas/VehicleConfig"
             },
             "type": "array",
-            "maxItems": 128,
             "minItems": 1,
             "title": "Vehicles"
           },
@@ -2029,7 +2039,6 @@
               "$ref": "#/components/schemas/Route"
             },
             "type": "array",
-            "maxItems": 128,
             "title": "Routes"
           },
           "schedule": {
@@ -2037,7 +2046,6 @@
               "$ref": "#/components/schemas/ScheduledStop"
             },
             "type": "array",
-            "maxItems": 20000,
             "title": "Schedule"
           },
           "hints": {
@@ -2045,7 +2053,6 @@
               "$ref": "#/components/schemas/DelayHint"
             },
             "type": "array",
-            "maxItems": 10000,
             "title": "Hints"
           }
         },
@@ -2170,7 +2177,6 @@
               "$ref": "#/components/schemas/StopTarget"
             },
             "type": "array",
-            "maxItems": 20000,
             "minItems": 1,
             "title": "Stops"
           }
@@ -2537,7 +2543,6 @@
             "anyOf": [
               {
                 "type": "integer",
-                "maximum": 120.0,
                 "minimum": 1.0
               },
               {
@@ -2559,7 +2564,6 @@
                   "type": "integer"
                 },
                 "type": "array",
-                "maxItems": 128,
                 "minItems": 1
               },
               {
@@ -2592,7 +2596,6 @@
           },
           "warmup_minutes": {
             "type": "integer",
-            "maximum": 120.0,
             "minimum": 0.0,
             "title": "Warmup Minutes",
             "description": "Сколько доступной истории перед start доставить для прогрева; будущие события остаются в очереди",
@@ -2824,7 +2827,6 @@
               "minItems": 2
             },
             "type": "array",
-            "maxItems": 10000,
             "minItems": 2,
             "title": "Path"
           },
@@ -2833,7 +2835,6 @@
               "$ref": "#/components/schemas/RouteStop"
             },
             "type": "array",
-            "maxItems": 500,
             "title": "Stops"
           }
         },

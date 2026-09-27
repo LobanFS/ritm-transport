@@ -161,3 +161,17 @@ def test_existing_json_uses_backend_contract_without_allowing_unknown_future_fie
                                   'time_fact_begin': '2026-01-06T13:00:00Z'}))
     with pytest.raises(ValueError):
         importer.load_context(context)
+
+
+def test_live_plan_and_model_contract_accept_more_than_20000_visits(sources):
+    from datetime import datetime, timedelta, timezone
+    from common.contracts import ModelPlanContext
+    plan, mapping, write = sources
+    start = datetime(2030, 1, 1, tzinfo=timezone.utc)
+    write([[1, f'visit-{index}', (start + timedelta(minutes=index)).isoformat(),
+            'POINT (37.6 55.75)', 'Остановка'] for index in range(20001)])
+    context = importer.build_context(plan, mapping, 'UTC', complete=True)
+    model_plan = ModelPlanContext(version=context.plan_version, timezone='UTC', complete=True,
+                                  stops=[entry.target for entry in context.schedule])
+    assert len(context.schedule) == len(model_plan.stops) == 20001
+    assert model_plan.stops[-1].id == 'visit-20000'

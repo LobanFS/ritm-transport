@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: backend.line_identity</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="backend.html" class="white">backend</a>.line_identity</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="https://github.com/LobanFS/ritm-transport/blob/main/backend/line_identity.py">backend/line_identity.py</a></td></tr></table>
+    <p><span class="code">Сопоставление&nbsp;планов&nbsp;одной&nbsp;линии,&nbsp;когда&nbsp;CSV&nbsp;выдаёт&nbsp;отдельный&nbsp;ID&nbsp;каждому&nbsp;ТС.<br>
+&nbsp;<br>
+Общий&nbsp;route_id&nbsp;считается&nbsp;явной&nbsp;связью.&nbsp;Иначе&nbsp;используем&nbsp;геометрию:&nbsp;не&nbsp;менее<br>
+80%&nbsp;остановок&nbsp;каждого&nbsp;плана&nbsp;должны&nbsp;совпадать&nbsp;с&nbsp;допуском&nbsp;80&nbsp;м.&nbsp;Это&nbsp;приближение<br>
+для&nbsp;планов&nbsp;без&nbsp;номера&nbsp;маршрута,&nbsp;а&nbsp;не&nbsp;восстановленный&nbsp;официальный&nbsp;маршрут.</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn">math<br>
+</td><td class="multicolumn"></td><td class="multicolumn"></td><td class="multicolumn"></td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-has_line_geometry"><strong>has_line_geometry</strong></a>(route: 'Mapping') -&gt; 'bool'</dt><dd><span class="code">Есть&nbsp;хотя&nbsp;бы&nbsp;две&nbsp;точки:&nbsp;одного&nbsp;узла&nbsp;недостаточно&nbsp;для&nbsp;выбора&nbsp;донора.</span></dd></dl>
+ <dl><dt><a name="-line_memberships"><strong>line_memberships</strong></a>(routes: 'Iterable[Mapping]') -&gt; 'dict[str, list[str]]'</dt><dd><span class="code">Для&nbsp;каждого&nbsp;плана&nbsp;вернуть&nbsp;себя&nbsp;и&nbsp;непосредственно&nbsp;сходные&nbsp;планы.<br>
+&nbsp;<br>
+Вызывать&nbsp;при&nbsp;загрузке/смене&nbsp;контекста.&nbsp;Кэш&nbsp;зависит&nbsp;от&nbsp;координат,&nbsp;поэтому<br>
+повторное&nbsp;использование&nbsp;route_id&nbsp;в&nbsp;новом&nbsp;архиве&nbsp;не&nbsp;сохраняет&nbsp;старую&nbsp;связь.<br>
+A≈B&nbsp;и&nbsp;B≈C&nbsp;не&nbsp;означают&nbsp;A≈C:&nbsp;списки&nbsp;не&nbsp;являются&nbsp;компонентами&nbsp;связности.</span></dd></dl>
+ <dl><dt><a name="-same_line"><strong>same_line</strong></a>(a: 'Mapping', b: 'Mapping') -&gt; 'bool'</dt><dd><span class="code">Прямая&nbsp;связь&nbsp;двух&nbsp;планов,&nbsp;без&nbsp;транзитивного&nbsp;объединения&nbsp;коридоров.</span></dd></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>EARTH_RADIUS_M</strong> = 6371000<br>
+<strong>Iterable</strong> = typing.Iterable<br>
+<strong>MATCH_RADIUS_M</strong> = 80<br>
+<strong>MIN_COVERAGE</strong> = 0.8<br>
+<strong>Mapping</strong> = typing.Mapping</td></tr></table>
+</body></html>

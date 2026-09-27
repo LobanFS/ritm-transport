@@ -430,7 +430,6 @@
               "$ref": "#/components/schemas/StopTarget"
             },
             "type": "array",
-            "maxItems": 20000,
             "minItems": 1,
             "title": "Stops"
           }

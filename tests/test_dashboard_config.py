@@ -47,7 +47,7 @@ def test_dynamic_config_is_uncached_and_does_not_change_static_file_or_call_back
     assert headers['Cache-Control'] == 'no-store'
     assert headers['Content-Type'].startswith('application/javascript')
     assert int(headers['Content-Length']) == len(body)
-    assert read_config(body.decode()) == {'uiMode':ui_mode}
+    assert read_config(body.decode()) == {'uiMode':ui_mode, 'importMaxBytes':268435456, 'importTimeoutSeconds':120}
     assert static.read_bytes() == before
 
 
@@ -66,7 +66,7 @@ def test_local_server_config_accepts_env_and_cli_without_writing_source(monkeypa
     monkeypatch.setattr(sys,'argv',['serve_dashboard.py']+(['--ui-mode',cli_mode] if cli_mode else []))
     serve_dashboard.main()
     _,_,body=response_from(captured['handler'])
-    assert read_config(body.decode()) == {'uiMode':expected}
+    assert read_config(body.decode()) == {'uiMode':expected, 'importMaxBytes':268435456, 'importTimeoutSeconds':120}
 
 
 @pytest.mark.parametrize('mode',[None,'dispatcher','full'])
@@ -76,7 +76,7 @@ def test_container_entrypoint_generates_the_same_runtime_contract(tmp_path,mode)
     if mode is not None: env['DASHBOARD_UI_MODE']=mode
     output=tmp_path/'config.js'
     subprocess.run(['sh',str(ROOT/'config/40-dashboard-config.sh'),str(output)],env=env,check=True)
-    assert read_config(output.read_text()) == {'uiMode':mode or 'full'}
+    assert read_config(output.read_text()) == {'uiMode':mode or 'full', 'importMaxBytes':268435456, 'importTimeoutSeconds':120}
 
 
 def test_invalid_modes_are_rejected_without_overwriting_config(tmp_path):
@@ -113,3 +113,25 @@ def test_dev_passes_ui_config_to_children_and_starts_in_live(monkeypatch,env_mod
     assert all(kwargs['env']['INITIAL_MODE'] == 'live' for _,kwargs in calls)
     dashboard=next(command for command,_ in calls if 'tools/serve_dashboard.py' in command)
     assert dashboard[-2:] == ['--ui-mode',expected]
+
+
+def test_import_limits_are_shared_by_docker_and_local_ui(tmp_path, monkeypatch):
+    monkeypatch.setenv('RITM_IMPORT_MAX_BYTES', '536870912')
+    monkeypatch.setenv('RITM_IMPORT_TIMEOUT_SECONDS', '240')
+    output = tmp_path / 'config.js'
+    subprocess.run(['sh', str(ROOT/'config/40-dashboard-config.sh'), str(output)], check=True)
+    docker = read_config(output.read_text())
+    local = read_config(serve_dashboard.dashboard_config('full').decode())
+    assert docker == local == {'uiMode':'full', 'importMaxBytes':536870912, 'importTimeoutSeconds':240}
+
+
+@pytest.mark.parametrize('name,value', [('RITM_IMPORT_MAX_BYTES','0'), ('RITM_IMPORT_TIMEOUT_SECONDS','-1'),
+    ('RITM_IMPORT_MAX_BYTES','all'), ('RITM_IMPORT_TIMEOUT_SECONDS','infinity')])
+def test_invalid_import_limits_rejected_without_replacing_config(tmp_path, monkeypatch, name, value):
+    monkeypatch.setenv(name, value)
+    output = tmp_path / 'config.js'
+    output.write_text('existing')
+    result = subprocess.run(['sh', str(ROOT/'config/40-dashboard-config.sh'), str(output)], capture_output=True)
+    assert result.returncode != 0 and output.read_text() == 'existing'
+    with pytest.raises(ValueError):
+        serve_dashboard.dashboard_config('full')

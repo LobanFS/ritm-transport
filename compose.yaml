@@ -31,6 +31,9 @@ services:
       INITIAL_MODE: live
       NDTP_HOST: 0.0.0.0
       NDTP_PORT: '9201'
+      NDTP_MAX_CONNECTIONS: ${NDTP_MAX_CONNECTIONS:-0}
+      RITM_IMPORT_MAX_BYTES: ${RITM_IMPORT_MAX_BYTES:-268435456}
+      RITM_IMPORT_TIMEOUT_SECONDS: ${RITM_IMPORT_TIMEOUT_SECONDS:-120}
     ports: ['127.0.0.1:8000:8000', '127.0.0.1:9201:9201']
     depends_on:
       ml: {condition: service_healthy}
@@ -47,6 +50,8 @@ services:
       dockerfile: dashboard.Dockerfile
     environment:
       DASHBOARD_UI_MODE: ${DASHBOARD_UI_MODE:-full}
+      RITM_IMPORT_MAX_BYTES: ${RITM_IMPORT_MAX_BYTES:-268435456}
+      RITM_IMPORT_TIMEOUT_SECONDS: ${RITM_IMPORT_TIMEOUT_SECONDS:-120}
     ports: ['127.0.0.1:8080:8080']
     depends_on:
       backend: {condition: service_healthy}

@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 import time
@@ -25,9 +26,19 @@ from pydantic import AwareDatetime, Field, field_validator, model_validator
 
 from common.contracts import Contract, Telemetry, parse_manual_fill
 
-MAX_REPLAY_EVENTS = 500000
-MAX_CUSTOM_IMPORT_BYTES = 80 * 1024 * 1024
-CUSTOM_IMPORT_SECONDS = 30
+def positive_env_int(name: str, default: int) -> int:
+    """Конечный ресурсный бюджет задаётся оператором при запуске."""
+    try:
+        value = int(os.getenv(name, str(default)))
+    except ValueError as exc:
+        raise ValueError(f'{name} должен быть положительным целым числом') from exc
+    if value <= 0:
+        raise ValueError(f'{name} должен быть положительным целым числом')
+    return value
+
+
+MAX_CUSTOM_IMPORT_BYTES = positive_env_int('RITM_IMPORT_MAX_BYTES', 256 * 1024 * 1024)
+CUSTOM_IMPORT_SECONDS = positive_env_int('RITM_IMPORT_TIMEOUT_SECONDS', 120)
 
 
 class ReplayImport(Contract):
@@ -50,15 +61,15 @@ class ReplayConfig(Contract):
     dataset_split: Literal['validate', 'train', 'custom'] = 'validate'
     start: AwareDatetime | None = Field(default=datetime(2026, 1, 6, 11, 30, tzinfo=timezone.utc),
                                        description='null: первая доступная телеметрия; для custom это значение по умолчанию')
-    duration_minutes: int | None = Field(default=None, ge=1, le=120,
+    duration_minutes: int | None = Field(default=None, ge=1,
         description='null: до последнего доступного события архива; число: верхняя граница окна для короткой проверки')
     timezone: str = 'UTC'
-    tr_ids: list[int] | None = Field(default=None, min_length=1, max_length=128,
+    tr_ids: list[int] | None = Field(default=None, min_length=1,
         description='null: все ТС с планом и сообщениями в срезе с предысторией; список: ручной выбор')
     speed: float = Field(default=10, ge=1, le=30)
     paused: bool = True
     deviation_source: Literal['csv_snapshot', 'gps'] = 'csv_snapshot'
-    warmup_minutes: int = Field(default=5, ge=0, le=120,
+    warmup_minutes: int = Field(default=5, ge=0,
                                 description='Сколько доступной истории перед start доставить для прогрева; будущие события остаются в очереди')
 
     @model_validator(mode='before')
@@ -218,10 +229,8 @@ def load_replay(root: Path, config: ReplayConfig, *, deadline: float | None = No
     def rows(relative_path, columns=None):
         check_deadline()
         with (root / relative_path).open(encoding='utf-8-sig', newline='') as stream:
-            for number, row in enumerate(csv.DictReader(stream), 1):
+            for row in csv.DictReader(stream):
                 check_deadline()
-                if config.dataset_split == 'custom' and number > MAX_REPLAY_EVENTS:
-                    raise ValueError('Слишком много строк пользовательского CSV')
                 # В train schedule есть будущие факты. За границу чтения строки
                 # проходят только явно разрешённые плановые поля.
                 yield {name: row.get(name, '') for name in columns} if columns else row
@@ -252,12 +261,8 @@ def load_replay(root: Path, config: ReplayConfig, *, deadline: float | None = No
         plan.append(ScheduledStop(tr_id=tr_id, target=StopTarget(id=row['tt_action_item_id'],
             name=row['building_address'] or row['tt_action_item_id'], scheduled_at=at, lon=lon, lat=lat,
             manual_fill=parse_manual_fill(row.get('manual_fill')))))
-        if len(plan) > 20000:
-            raise ValueError('Слишком большой срез расписания')
     plan.sort(key=lambda s: (s.target.scheduled_at, s.target.id))
     ids = requested_ids if requested_ids is not None else planned_ids
-    if len(ids) > 128:
-        raise ValueError('Более 128 ТС; выберите автобусы вручную')
     if config.start is None:
         earliest = min((max(dt(row['event_time']), dt(row['receive_time']))
                         for row in rows(traffic_file) if int(row['tr_id']) in ids), default=None)
@@ -300,8 +305,6 @@ def load_replay(root: Path, config: ReplayConfig, *, deadline: float | None = No
         quality['invalid_locations'] += int(not point.location_valid or point.lat is None or point.lon is None)
         quality['receive_before_event'] += int(received < event)
         events.append((available, 'gps', point))
-        if len(events) > MAX_REPLAY_EVENTS:
-            raise ValueError(f'Более {MAX_REPLAY_EVENTS} событий; выберите ТС или задайте duration_minutes явно')
     for row in (rows(config.points_file) if config.points_file else ()):
         tr_id, at = int(row['tr_id']), dt(row['T'])
         # Context содержит только ТС с принятой телеметрией. Подсказки остальных
@@ -320,8 +323,6 @@ def load_replay(root: Path, config: ReplayConfig, *, deadline: float | None = No
                 delay_s=float(row['cur_dev_s']), source='csv_snapshot', sample_id=row['sample_id'],
                 target_stop_id=row['target_stop_id'], target_time_begin=dt(row['target_time_begin']))))
             quality['snapshots'] += 1
-            if len(events) > MAX_REPLAY_EVENTS:
-                raise ValueError(f'Более {MAX_REPLAY_EVENTS} событий; выберите ТС или задайте duration_minutes явно')
     missing_ids = sorted(ids-set(units))
     if not quality['telemetry'] or (requested_ids is not None and missing_ids):
         raise ValueError('В срезе нет телеметрии для выбранных ТС: '+', '.join(map(str, missing_ids)))
@@ -367,7 +368,7 @@ def load_replay(root: Path, config: ReplayConfig, *, deadline: float | None = No
 
 
 def prepare_custom_replay(root: Path, payload: ReplayImport) -> LoadedReplay:
-    """Проверить ограниченный пользовательский архив до смены активного контекста."""
+    """Проверить пользовательский архив в заданном бюджете времени до смены активного контекста."""
     from common.contracts import StopTarget
     deadline = time.monotonic()+CUSTOM_IMPORT_SECONDS
     target = root/'custom'
@@ -384,7 +385,6 @@ def prepare_custom_replay(root: Path, payload: ReplayImport) -> LoadedReplay:
     def dt(value):
         parsed = datetime.fromisoformat(value)
         return parsed.replace(tzinfo=zone) if parsed.tzinfo is None else parsed
-    events = 0
     for name, text in files.items():
         if '\x00' in text:
             raise ValueError('CSV содержит нулевой байт')
@@ -402,13 +402,6 @@ def prepare_custom_replay(root: Path, payload: ReplayImport) -> LoadedReplay:
                 count += 1
                 if None in row or any(row.get(key) is None for key in required[name]):
                     raise ValueError(f'Неполная или лишняя колонка в {name}')
-                if name == 'schedule_plan.csv':
-                    if count > 20000:
-                        raise ValueError('Более 20000 строк расписания')
-                else:
-                    events += 1
-                    if events > MAX_REPLAY_EVENTS:
-                        raise ValueError(f'Более {MAX_REPLAY_EVENTS} строк телеметрии и points.csv')
                 if int(row['tr_id']) <= 0:
                     raise ValueError('tr_id должен быть положительным')
                 if name == 'traffic.csv':

@@ -139,3 +139,15 @@ def test_replay_restoration_rejects_pending_or_unhealthy_runtime(problem):
     else:
         state['health']['ml'] = problem.removeprefix('ml_')
     assert not restored_replay_ready(state, after_cycle=10, context_version=7)
+
+
+def test_runtime_dashboard_config_checked_against_container_env(monkeypatch):
+    docker = Docker(None, 'test-project')
+    inventory = {'dashboard': {'id':'dashboard-id', 'environment': {
+        'DASHBOARD_UI_MODE':'dispatcher', 'RITM_IMPORT_MAX_BYTES':'536870912', 'RITM_IMPORT_TIMEOUT_SECONDS':'240'}}}
+    config = {'uiMode':'dispatcher', 'importMaxBytes':536870912, 'importTimeoutSeconds':240}
+    monkeypatch.setattr(docker, 'run', lambda *command: 'window.RITM_CONFIG = '+json.dumps(config)+';\n')
+    assert docker.dashboard_config(inventory) == config
+    config['importMaxBytes'] = 80 * 1024 * 1024
+    with pytest.raises(AssertionError, match='не соответствует'):
+        docker.dashboard_config(inventory)

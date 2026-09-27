@@ -58,7 +58,7 @@ class ModelPlanContext(Contract):
     version: str = Field(min_length=1, max_length=160)
     timezone: str = Field(min_length=1, max_length=80)
     complete: bool
-    stops: list[StopTarget] = Field(min_length=1, max_length=20000)
+    stops: list[StopTarget] = Field(min_length=1)
 
     @model_validator(mode='after')
     def valid_plan(self):

@@ -107,8 +107,6 @@ def build_context(plan_path: Path, mapping_path: Path, timezone: str | None = No
                     manual_fill=parse_manual_fill(row.get('manual_fill')))
                 schedule.append(ScheduledStop(tr_id=tr_id, target=target))
                 covered.add(tr_id)
-                if len(schedule) > 20000:
-                    raise ValueError('Более 20000 посещений: уменьшите план/список ТС')
             except (ValueError, TypeError) as exc:
                 raise ValueError(f'Строка CSV {line_number}: {exc}') from exc
     missing = sorted(vehicle_ids - covered)
@@ -135,7 +133,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--out', type=Path, help='Куда сохранить проверенный JSON; обязательно при сборке CSV')
     parser.add_argument('--apply', action='store_true', help='ЗАМЕНИТЬ live-контекст backend и очистить его историю')
     parser.add_argument('--backend', default='http://127.0.0.1:8000')
+    parser.add_argument('--timeout', type=float, default=120, help='Время ожидания HTTP-ответа в секундах')
     args = parser.parse_args(argv)
+    if args.timeout <= 0:
+        parser.error('--timeout должен быть положительным')
     building = args.schedule_plan is not None
     if (args.context is None) == (not building):
         parser.error('Выберите готовый context.json ИЛИ --schedule-plan с --vehicles и --out')
@@ -157,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.apply:
             request = Request(args.backend.rstrip('/')+'/api/v1/live/context', data=payload.encode('utf-8'),
                               headers={'Content-Type': 'application/json'}, method='POST')
-            with urlopen(request, timeout=15) as response:
+            with urlopen(request, timeout=args.timeout) as response:
                 summary['backend_response'] = json.load(response)
             summary['applied'] = True
         print(json.dumps(summary, ensure_ascii=False, indent=2))
