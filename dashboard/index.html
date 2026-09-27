@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/styles.css">
   <script src="/vendor/leaflet/leaflet.js" defer></script>
   <script src="/config.js" defer></script>
+  <script src="/route-geometry.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -63,26 +64,29 @@
 
     <section id="map-section" class="workspace" aria-label="Карта и выбранный автобус">
       <article class="panel map-panel">
-        <div class="map-tools" aria-label="Фильтры и управление картой">
-        <div class="panel-heading map-heading"><div><h2>Карта движения</h2></div><div class="map-state" id="map-state"><span class="status-dot"></span><span id="map-state-text">Ожидание</span></div></div>
-        <div class="filter-bar">
-          <label class="filter-label"><span id="route-filter-label">Маршрут</span><select id="route-filter" aria-label="Фильтр по маршруту"><option value="all">Все маршруты</option></select></label>
-          <label class="filter-label"><span>Состояние</span><select id="risk-filter" aria-label="Фильтр по риску"><option value="all">Все состояния</option><option value="red">Требуют внимания</option><option value="amber">Под наблюдением</option><option value="green">По расписанию</option><option value="blue">Опережение &gt;30 с</option></select></label>
+        <div class="map-toolbar" aria-label="Поиск и управление картой">
           <label class="search-label"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="m13 13 4 4"></path></svg><input id="vehicle-search" type="search" placeholder="Найти автобус" aria-label="Найти автобус по номеру или ID" autocomplete="off"></label>
-        </div>
-        <div class="map-actions" role="group" aria-label="Управление картой">
-          <button type="button" class="button" id="map-fit">Все автобусы</button>
-
-          <button type="button" class="button" id="map-focus">К автобусу</button>
-          <button type="button" class="button" id="map-follow" aria-pressed="false">Следовать: выкл.</button>
-        </div>
-        <div class="map-source-bar technical"><span id="tile-status" role="status">Подложка OpenStreetMap</span><button type="button" id="tile-toggle" aria-pressed="true">Скрыть подложку</button></div>
-        <div class="map-bottom"><div class="legend"><span><i class="dot amber"></i>+1–2,5 мин</span><span><i class="dot red"></i>Больше +2,5 мин</span><span><i class="dot blue"></i>Раньше &gt;30 с</span><span><i class="dot teal"></i>По расписанию</span></div><span class="legend-note">Бордовый — сильнее опоздание.</span><span class="map-context-note">Линия и остановки выбранного автобуса</span></div>
+          <div class="risk-checkboxes" role="group" aria-label="Показать автобусы по риску">
+            <label class="risk-checkbox"><input id="risk-red" type="checkbox"><i class="dot red" aria-hidden="true"></i><span>Опаздывают</span></label>
+            <label class="risk-checkbox"><input id="risk-amber" type="checkbox"><i class="dot amber" aria-hidden="true"></i><span>Под наблюдением</span></label>
+          </div>
+          <div class="map-actions" role="group" aria-label="Управление картой">
+            <button type="button" class="button" id="map-focus">К автобусу</button>
+            <button type="button" class="button" id="map-fit">Все автобусы</button>
+            <button type="button" class="button" id="map-follow" aria-pressed="false">Следовать: выкл.</button>
+            <button type="button" class="button technical" id="tile-toggle" aria-pressed="true">Скрыть подложку</button>
+          </div>
+          <div class="map-state" id="map-state"><span class="status-dot"></span><span id="map-state-text">Ожидание</span></div>
+          <span class="sr-only" id="tile-status" role="status">Подложка OpenStreetMap</span>
         </div>
         <div class="map-canvas" id="map-canvas">
           <div id="route-map" aria-label="Интерактивная карта автобусов и плановых остановок"></div>
           <div class="map-empty" id="map-empty"><span class="empty-map-icon" aria-hidden="true">⌖</span><h3 id="map-empty-title">Ожидаем данные</h3><p id="map-empty-text">Автобусы появятся после получения координат.</p></div>
           <div class="map-count" id="map-count">0 автобусов</div>
+          <div class="map-legend" aria-label="Цвета автобусов">
+            <div class="legend"><span><i class="dot amber"></i>Опоздание 1–2,5 мин</span><span><i class="dot red"></i>Опоздание &gt;2,5 мин</span><span><i class="dot blue"></i>Опережение &gt;30 с</span><span><i class="dot teal"></i>По расписанию</span></div>
+            <span class="legend-note">Бордовый — сильнее опоздание</span>
+          </div>
         </div>
       </article>
 
@@ -92,27 +96,20 @@
         <div id="detail-empty" class="detail-empty"><span class="empty-detail-icon" aria-hidden="true">▥</span><h3>Выберите автобус</h3><p>Нажмите на маркер карты или строку в списке, чтобы увидеть прогноз и основания сигнала.</p></div>
         <div id="detail-content" hidden>
           <div class="vehicle-identity"><span class="bus-avatar" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="7" y="5" width="18" height="23" rx="5"/><path d="M8 17h16M11 23h2m6 0h2M12 9h8"/><path d="M10 28v2m12-2v2"/></svg></span><div><h3 id="detail-label">—</h3><div class="vehicle-sub"><span class="route-chip" id="detail-route">—</span><span id="detail-id">—</span></div></div><span class="risk-dot" id="detail-risk-dot"></span></div>
-          <div class="forecast-box" id="forecast-box"><div class="forecast-label">ПРОГНОЗ НА ЦЕЛЕВОЙ ОСТАНОВКЕ</div><div class="forecast-value" id="detail-delay">—</div><p class="forecast-status" id="detail-forecast-status">По плану</p><div class="forecast-target" id="detail-target"></div><div class="forecast-meta"><span id="detail-risk">По расписанию</span></div></div>
-          <dl class="vehicle-facts"><div><dt>Плановое прибытие</dt><dd id="detail-planned-arrival">—</dd></div><div><dt>Ожидаемое прибытие</dt><dd id="detail-expected-arrival">—</dd></div><div><dt>Последнее известное отклонение</dt><dd id="detail-current">—</dd></div><div><dt>Скорость</dt><dd id="detail-speed">—</dd></div><div><dt>Вероятность задержки &gt;2 мин</dt><dd id="detail-probability">—</dd></div><div><dt>Последний GPS</dt><dd id="detail-freshness">—</dd></div></dl>
+          <div class="forecast-box" id="forecast-box"><div class="forecast-label" id="detail-forecast-label">ПРОГНОЗ НА ЦЕЛЕВОЙ ОСТАНОВКЕ</div><div class="forecast-value" id="detail-delay">—</div></div>
+          <dl class="vehicle-facts"><div><dt>Остановка</dt><dd id="detail-target">—</dd></div><div><dt>Плановое прибытие</dt><dd id="detail-planned-arrival">—</dd></div><div><dt>Ожидаемое прибытие</dt><dd id="detail-expected-arrival">—</dd></div><div><dt>Последнее известное отклонение</dt><dd id="detail-current">—</dd></div><div><dt>Скорость</dt><dd id="detail-speed">—</dd></div><div><dt>Вероятность задержки &gt;2 мин</dt><dd id="detail-probability">—</dd></div><div><dt>Последний GPS</dt><dd id="detail-freshness">—</dd></div></dl>
 
+          <section id="detail-cause-panel" class="vehicle-cause" aria-label="Причина и наблюдения по выбранному автобусу">
+            <div class="cause-heading"><h3>Предполагаемая причина</h3><span id="cause-vehicle" hidden></span></div>
+            <div class="cause-content"><p id="detail-cause">Причина не установлена</p><small class="diagnostic-note" id="detail-cause-status"></small><ul class="reasons-list" id="detail-observations"></ul></div>
+            <div class="recommendation"><span aria-hidden="true">↗</span><div><h4>Диспетчеру</h4><p id="detail-recommendation">—</p></div></div>
+          </section>
         </div>
       </aside>
     </section>
 
-    <section class="insights-grid" id="forecast-insights" aria-label="Причина и детали прогноза" hidden>
-      <section class="panel cause-panel" aria-label="Причина и наблюдения по выбранному автобусу">
-        <div class="panel-heading"><h2>Предполагаемая причина</h2><span id="cause-vehicle" class="small-label">Выберите автобус</span></div>
-          <div class="cause-content"><p id="detail-cause">Причина не установлена</p><small class="diagnostic-note" id="detail-cause-status"></small><ul class="reasons-list" id="detail-observations"></ul><small class="diagnostic-note technical" id="detail-observed-at"></small></div>
-          <div class="recommendation"><span aria-hidden="true">↗</span><div><h4>Диспетчеру</h4><p id="detail-recommendation">—</p></div></div>
-      </section>
-      <section class="panel insight-panel technical" id="detail-data-panel" aria-label="Данные прогноза">
-        <div class="panel-heading"><h2>Данные прогноза</h2><a id="detail-trace" class="export-link" target="_blank" rel="noopener">Запрос и ответ ↗</a></div>
-        <div class="insight-content"><p id="detail-deviation-source">—</p><small class="diagnostic-note" id="detail-deviation-time"></small><p id="detail-prediction-input">—</p><div class="probability-context"><h4>Вероятность задержки &gt;2 мин</h4><p id="detail-probability-note">—</p></div></div>
-      </section>
-    </section>
-
     <section class="lower-grid">
-      <article class="panel fleet-panel" id="vehicles-section"><div class="panel-heading"><div class="heading-inline"><h2>Транспорт на линии</h2><span class="count-chip" id="table-count">0</span></div><span class="small-label">СНАЧАЛА РИСКИ</span></div><div class="table-scroll"><table class="fleet-table"><thead><tr><th scope="col">Автобус / маршрут</th><th scope="col">Прогноз задержки</th><th scope="col">Состояние</th><th scope="col">Возраст данных</th><th scope="col"><span class="sr-only">Открыть</span></th></tr></thead><tbody id="vehicle-table-body"></tbody></table></div><div class="table-empty" id="table-empty">Транспорт пока не поступил в систему.</div></article>
+      <article class="panel fleet-panel" id="vehicles-section"><div class="panel-heading"><div class="heading-inline"><h2>Транспорт на линии</h2><span class="count-chip" id="table-count">0</span></div><span class="small-label">СНАЧАЛА РИСКИ</span></div><div class="table-scroll"><table class="fleet-table"><thead><tr><th scope="col">Автобус / маршрут</th><th scope="col">Прогноз</th><th scope="col">Состояние</th><th scope="col">Возраст данных</th><th scope="col"><span class="sr-only">Открыть</span></th></tr></thead><tbody id="vehicle-table-body"></tbody></table></div><div class="table-empty" id="table-empty">Транспорт пока не поступил в систему.</div></article>
       <div class="operations-side-stack">
       <section class="panel attention-panel current-alerts" aria-label="Актуальные проблемы на всех маршрутах">
       <div class="panel-heading"><div><div class="heading-inline"><h2>Сейчас требуют внимания</h2><span class="count-chip" id="attention-count">0</span></div><p>Прогноз задержки от 1 минуты</p></div><a href="#vehicles-section" class="attention-all">Все автобусы ↓</a></div>
@@ -129,7 +126,7 @@
       <div class="system-health"><div><span class="status-dot" id="api-dot"></span><span>API</span><strong id="api-status">Подключение</strong></div><div><span class="status-dot" id="ml-dot"></span><span>ML-сервис</span><strong id="ml-status">—</strong></div><div><span class="status-dot" id="source-dot"></span><span>Источник</span><strong id="source-status">—</strong></div><div><span title="Только HTTP-вызов ML, без ожидания следующего цикла и обновления UI">p95 HTTP ML</span><strong id="inference-latency">—</strong></div><div><span title="Признаки, HTTP ML или fallback и публикация; без ожидания следующего цикла и опроса UI">p95 цикла</span><strong id="pipeline-latency">—</strong></div></div>
       <div class="context-summary"><span class="input-source-badge" id="input-source-badge">Источник отклонения: ожидание</span><span id="context-summary">План пока не загружен</span> <a href="/api/v1/context" target="_blank" rel="noopener">Посмотреть план и привязки JSON</a></div>
       <section class="replay-settings" id="replay-settings" hidden>
-        <h3>Исторический поток <span id="replay-active-source">—</span></h3>
+        <h3>Исторический поток</h3>
         <form id="replay-form">
           <label class="filter-label"><span>Набор данных</span><select id="replay-split" aria-label="Набор данных replay"><option value="validate">validate · реальные ТС</option><option value="train">train · реальные и синтетические ТС</option><option value="custom">Свой архив</option></select></label>
           <label class="filter-label"><span>Текущее отклонение</span><select id="replay-source" aria-label="Источник отклонения replay"><option value="gps">Считать по GPS и плану</option><option value="csv_snapshot">Готовое из points.csv</option></select></label>

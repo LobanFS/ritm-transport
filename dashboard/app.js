@@ -48,10 +48,8 @@
   let busy = false;
   let incidentSignature = "";
   let attentionSignature = "";
-  let routeSignature = "";
   let map = null;
   let tileLayer = null;
-  let targetMarker = null;
   let routeLayer = null;
   let routeGeometrySignature = "";
   let customArchive = { available: false, has_points: false };
@@ -96,7 +94,8 @@
   const delay = (value, compact = false) => {
     if (!finite(value)) return "По расписанию";
     const total = Math.round(Math.abs(value));
-    const sign = value > 0 ? "+" : value < 0 ? "−" : "";
+    if (value < 0) return `Опережение ${compact ? `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}` : `на ${duration(total)}`}`;
+    const sign = value > 0 ? "+" : "";
     if (compact) return `${sign}${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
     return sign + duration(total);
   };
@@ -144,32 +143,17 @@
     });
   };
 
+  const riskAllowed = (band, red, amber) => (!red && !amber) || (red && band === "red") || (amber && band === "amber");
+
   function filteredVehicles() {
-    const route = $("route-filter").value;
-    const risk = $("risk-filter").value;
+    const red = $("risk-red").checked;
+    const amber = $("risk-amber").checked;
     const query = $("vehicle-search").value.trim().toLocaleLowerCase("ru-RU");
     return list(snapshot?.vehicles).filter((vehicle) => {
-      if (route !== "all" && idOf(vehicle.route_id) !== route) return false;
-      if (risk === "stale" && vehicle.status === "fresh" && !apiStale()) return false;
-      const band = effectiveRisk(vehicle);
-      if (risk !== "all" && risk !== "stale" && (band === "unknown" ? "green" : band) !== risk) return false;
+      if (!riskAllowed(effectiveRisk(vehicle), red, amber)) return false;
       const searchable = [vehicle.label, vehicle.tr_id, vehicle.unit_id, vehicle.route_id, routeName(vehicle)].join(" ").toLocaleLowerCase("ru-RU");
       return !query || searchable.includes(query);
     }).sort((a, b) => RISK[effectiveRisk(a)].rank - RISK[effectiveRisk(b)].rank || (displayedDelay(b) || 0) - (displayedDelay(a) || 0) || idOf(a.tr_id).localeCompare(idOf(b.tr_id)));
-  }
-
-  function renderRouteOptions() {
-    const routes = list(snapshot?.routes);
-    const signature = JSON.stringify([snapshot?.mode, routes.map((route) => [route.route_id, route.name])]);
-    if (signature === routeSignature) return;
-    routeSignature = signature;
-    const previous = $("route-filter").value;
-    const replay = snapshot?.mode === "replay";
-    text("route-filter-label", replay ? (fullUI ? "План автобуса" : "Автобус") : "Маршрут");
-    $("route-filter").setAttribute("aria-label", replay ? "Фильтр по плану автобуса" : "Фильтр по маршруту");
-    $("route-filter").replaceChildren(new Option(replay ? (fullUI ? "Все планы ТС" : "Все автобусы") : "Все маршруты", "all"));
-    routes.forEach((route) => $("route-filter").append(new Option(replay && !fullUI ? String(route.name || route.route_id).replace(/^План ТС /, "Автобус ") : String(route.name || route.route_id), idOf(route.route_id))));
-    $("route-filter").value = Array.from($("route-filter").options).some((option) => option.value === previous) ? previous : "all";
   }
 
   const latLng = (lon, lat) => finite(lon) && finite(lat) && Math.abs(lon) <= 180 && Math.abs(lat) <= 85.0511 ? [lat, lon] : null;
@@ -183,24 +167,35 @@
     text("map-follow", `Следовать: ${enabled ? "вкл." : "выкл."}`);
   }
 
+  const mapCardWidth = () => window.innerWidth > 1100
+    ? (document.querySelector(".vehicle-panel")?.getBoundingClientRect().width || 0) + 28 : 0;
+
+  function centreVehicle(position, zoom = map.getZoom()) {
+    map.setView(position, zoom, {animate: false});
+    const offset = mapCardWidth() / 2;
+    if (offset) map.panBy([offset, 0], {animate: false});
+  }
+
   function focusVehicle() {
     const vehicle = chosenVehicle();
     const position = vehicle && latLng(vehicle.lon, vehicle.lat);
-    if (!map || !position) { toast("У выбранного автобуса пока нет координат."); return; }
-    map.setView(position, Math.max(map.getZoom(), 15), { animate: false });
+    if (!map) return;
+    if (!position) { fitMap(true); return; }
+    centreVehicle(position, Math.max(map.getZoom(), 15));
   }
 
   function fitMap(onlySelectedRoute = false) {
     if (!map) return;
     const vehicle = chosenVehicle();
-    const routeId = onlySelectedRoute ? idOf(vehicle?.route_id) : $("route-filter").value;
+    const routeId = idOf(vehicle?.route_id);
     const points = [];
     if (onlySelectedRoute) list(snapshot?.routes).filter(route => idOf(route.route_id) === routeId).forEach(route => {
-      list(route.path).forEach(point => { const p = Array.isArray(point) && latLng(point[0], point[1]); if (p) points.push(p); });
+      const paths = window.RouteGeometry?.paths(route).paths || [list(route.path)];
+      paths.forEach(path => path.forEach(point => { const p = Array.isArray(point) && latLng(point[0], point[1]); if (p) points.push(p); }));
       list(route.stops).forEach(stop => { const p = latLng(stop.lon, stop.lat); if (p) points.push(p); });
     });
     filteredVehicles().filter(v => !onlySelectedRoute || idOf(v.route_id) === routeId).forEach(v => { const p = latLng(v.lon, v.lat); if (p) points.push(p); });
-    if (points.length) { setFollow(false); map.fitBounds(points, { padding: [48, 48], maxZoom: 18, animate: false }); }
+    if (points.length) { setFollow(false); map.fitBounds(points, { paddingTopLeft: [48, 48], paddingBottomRight: [48 + mapCardWidth(), 48], maxZoom: 18, animate: false }); }
     else toast("Нет координат для выбранного маршрута.");
   }
 
@@ -208,8 +203,10 @@
     if (map || !window.L) return;
     map = L.map("route-map", { zoomControl: false, scrollWheelZoom: true, attributionControl: true, maxZoom: 19, minZoom: 3 });
     map.setView([55.751244, 37.618423], 11);
-    L.control.zoom({ position: "topright", zoomInTitle: "Увеличить масштаб", zoomOutTitle: "Уменьшить масштаб" }).addTo(map);
+    L.control.zoom({ position: "topleft", zoomInTitle: "Увеличить масштаб", zoomOutTitle: "Уменьшить масштаб" }).addTo(map);
     map.attributionControl.setPrefix(false);
+    // Cached road geometry also comes from OSM: retain credit without the tile layer.
+    map.attributionControl.addAttribution('&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors');
     tileLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
@@ -247,7 +244,11 @@
     // Programmatic setView never disables following; a deliberate wheel/pinch does.
     $("route-map").addEventListener("wheel", () => setFollow(false), { passive: true });
     $("route-map").addEventListener("touchstart", event => { if (event.touches.length > 1) setFollow(false); }, { passive: true });
-    if (typeof ResizeObserver !== "undefined") new ResizeObserver(() => map.invalidateSize({ pan: false })).observe($("map-canvas"));
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(() => map.invalidateSize({pan: false})).observe($("map-canvas"));
+      const toolbar = document.querySelector(".map-toolbar");
+      new ResizeObserver(() => $("map-section").style.setProperty("--map-toolbar-height", `${toolbar.getBoundingClientRect().height}px`)).observe(toolbar);
+    }
   }
 
   // A direction belongs to a particular accepted GPS event, never to a marker's
@@ -290,8 +291,7 @@
 
   function renderRouteGeometry() {
     if (!map) return;
-    const filter = $("route-filter").value;
-    const routeId = filter === "all" ? idOf(chosenVehicle()?.route_id) : filter;
+    const routeId = idOf(chosenVehicle()?.route_id);
     const routes = list(snapshot?.routes).filter(route => idOf(route.route_id) === routeId);
     const signature = JSON.stringify([snapshot?.context?.version, routes]);
     if (signature === routeGeometrySignature) return;
@@ -300,10 +300,17 @@
     routeLayer.clearLayers();
     const seenStops = new Set();
     routes.forEach(route => {
-      const points = list(route.path).map(point => Array.isArray(point) ? latLng(point[0], point[1]) : null).filter(Boolean);
-      if (points.length > 1) L.polyline(points, {
-        color: "#6f8580", weight: 2, opacity: .7, interactive: false,
-      }).addTo(routeLayer);
+      const geometry = window.RouteGeometry?.paths(route) || {roadPaths: [], planPaths: [list(route.path)]};
+      const draw = (paths, schematic) => {
+        const lines = paths.map(path => path.map(point => Array.isArray(point) ? latLng(point[0], point[1]) : null).filter(Boolean)).filter(path => path.length > 1);
+        if (lines.length) L.polyline(lines, {
+          color: "#3b7b91", weight: schematic ? 2.5 : 3.5, opacity: .8,
+          dashArray: schematic ? "6 6" : null, interactive: false,
+          className: schematic ? "route-line route-line-plan" : "route-line route-line-road",
+        }).addTo(routeLayer);
+      };
+      draw(list(geometry.roadPaths), false);
+      draw(list(geometry.planPaths), true);
       list(route.stops).forEach(stop => {
         const position = latLng(stop.lon, stop.lat);
         if (!position) return;
@@ -330,7 +337,6 @@
       directionContext = contextKey;
     }
     directionClock = clock;
-    const routeFilter = $("route-filter").value;
     const visibleIds = new Set();
     let onMap = 0;
     vehicles.forEach(vehicle => {
@@ -384,16 +390,9 @@
     const existingIds = new Set(list(snapshot?.vehicles).map(vehicle => idOf(vehicle.tr_id)));
     markers.forEach((marker, key) => { if (!existingIds.has(key)) { marker.layer.remove(); markers.delete(key); } });
     const selected = chosenVehicle();
-    const target = selected?.prediction?.target || selected?.target;
-    const targetPosition = target && latLng(target.lon, target.lat);
-    if (map && targetPosition) {
-      if (!targetMarker) targetMarker = L.circleMarker(targetPosition, { radius: 10, color: "#203349", weight: 3, fillColor: "#fff", fillOpacity: .6 }).addTo(map);
-      targetMarker.setLatLng(targetPosition).bindTooltip(node("span", "", `Цель: ${target.name} · план ${time(target.scheduled_at)} МСК`));
-      if (!map.hasLayer(targetMarker)) targetMarker.addTo(map);
-    } else if (targetMarker) { targetMarker.remove(); targetMarker = null; }
     const context = snapshot?.mode === "generator" ? `generator:${snapshot.generator?.session_id}` : snapshot?.mode === "replay" ? `replay:${snapshot.replay?.dataset_split || "validate"}:${snapshot.replay?.start}:${list(snapshot.replay?.tr_ids).join(",")}` : snapshot?.mode;
     if (map && context && context !== mapContext && onMap > 0) { mapContext = context; fitMap(); }
-    if (map && followSelected && selected) { const p = latLng(selected.lon, selected.lat); if (p) map.panTo(p, { animate: false }); }
+    if (map && followSelected && selected) { const p = latLng(selected.lon, selected.lat); if (p) centreVehicle(p); }
     $("map-empty").hidden = onMap > 0;
     if (!snapshot) {
       text("map-empty-title", "Ожидаем данные");
@@ -478,11 +477,10 @@
     const vehicle = list(snapshot?.vehicles).find((v) => idOf(v.tr_id) === selectedId);
     $("detail-empty").hidden = !!vehicle;
     $("detail-content").hidden = !vehicle;
-    $("forecast-insights").hidden = !vehicle;
     text("cause-vehicle", vehicle ? vehicleName(vehicle) : "Выберите автобус");
     if (!vehicle) {
       text("detail-cause", "Выберите автобус на карте или в списке");
-      text("detail-cause-status", ""); text("detail-observed-at", "");
+      text("detail-cause-status", "");
       $("detail-observations").replaceChildren(); delete $("detail-observations").dataset.content;
       text("detail-recommendation", "—");
       return;
@@ -498,52 +496,40 @@
     $("detail-route").hidden = !fullUI && snapshot.mode === "replay";
     $("detail-risk-dot").style.background = vehicleColor(vehicle);
     $("forecast-box").className = `forecast-box risk-${risk}`;
-    text("detail-delay", delay(displayedDelay(vehicle)));
+    const forecastDelay = displayedDelay(vehicle);
+    text("detail-forecast-label", finite(forecastDelay) && forecastDelay < 0 ? "ОПЕРЕЖЕНИЕ НА ЦЕЛЕВОЙ ОСТАНОВКЕ" : "ПРОГНОЗ НА ЦЕЛЕВОЙ ОСТАНОВКЕ");
+    text("detail-delay", finite(forecastDelay) && forecastDelay < 0 ? duration(Math.abs(forecastDelay)) : delay(forecastDelay));
     $("detail-delay").style.color = vehicleColor(vehicle);
     const onPlan = risk === "unknown";
-    text("detail-forecast-status", onPlan ? "По плану" : prediction?.method === "fallback" ? "Резервная оценка" : "Отклонение от расписания");
     text("detail-target", target?.name || "");
-    $("detail-target").hidden = !target;
+    $("detail-target").parentElement.hidden = !target;
     text("detail-planned-arrival", target ? `${time(target.scheduled_at, true)} МСК` : "—");
     $("detail-planned-arrival").parentElement.hidden = !target;
     const expected = expectedArrival(target?.scheduled_at, displayedDelay(vehicle));
     text("detail-expected-arrival", expected ? `${time(expected, true)} МСК` : "По расписанию");
-    text("detail-risk", RISK[risk].short);
     text("detail-current", finite(vehicle.cur_dev_s) ? delay(vehicle.cur_dev_s) : "—");
     $("detail-current").parentElement.hidden = !finite(vehicle.cur_dev_s);
-    $("detail-data-panel").hidden = onPlan;
-    const deviation = vehicle.current_deviation;
-    const fromArrival = deviation && ["arrival", "demo_arrival", "generator_arrival", "gps_estimate", "door_estimate"].includes(deviation.source);
-    text("detail-deviation-source", !deviation ? "" : fromArrival
-      ? `${deviation.source === "gps_estimate" ? "GPS + расписание" : "Подтверждение прибытия"} · ${deviation.stop_name || deviation.planned_stop_id || "остановка"}`
-      : deviation.source === "csv_snapshot" ? "Текущее отклонение из points.csv" : "Текущее отклонение из внешнего источника");
-    text("detail-deviation-time", deviation ? `Наблюдение ${time(deviation.observed_at, true)} МСК${finite(deviation.uncertainty_s) ? ` · интервал GPS ${deviation.uncertainty_s} с` : ""}` : "");
-    text("detail-prediction-input", prediction ? `Вход расчёта: ${delay(vehicle.prediction_current_delay_s)} · ${time(prediction.issued_at, true)} МСК` : "");
-    $("detail-trace").href = `/api/v1/vehicles/${encodeURIComponent(vehicle.tr_id)}/forecast-trace`;
-    $("detail-trace").hidden = !prediction;
     text("detail-speed", finite(vehicle.speed_kmh) ? `${Math.round(vehicle.speed_kmh)} км/ч` : "—");
     const probability = onPlan ? null : prediction?.probability_late;
     const probabilityText = probabilityLabel(probability, prediction?.probability_status);
     text("detail-probability", probabilityText);
     $("detail-probability").title = probabilityText !== "—" ? prediction?.probability_note || "" : "";
     $("detail-probability").parentElement.hidden = probabilityText === "—";
-    text("detail-probability-note", probabilityText !== "—" ? prediction?.probability_note || "" : "");
-    $("detail-probability-note").parentElement.hidden = probabilityText === "—";
     text("detail-freshness", finite(vehicle.age_s) ? `${duration(vehicle.age_s)} назад` : "—");
     const explanation = vehicle.explanation;
     const modelExplanation = prediction?.forecast_explanation;
-    text("detail-cause", onPlan ? "По плану" : explanation?.cause_status === "hypothesis"
-      ? explanation.possible_cause : explanation?.summary || "Причина задержки не установлена");
+    $("detail-cause-panel").hidden = onPlan;
+    text("detail-cause", onPlan ? "" : explanation?.summary || "Причина задержки не установлена");
+    $("detail-cause").title = explanation?.cause_status === "hypothesis" ? explanation.possible_cause : "";
     text("detail-cause-status", onPlan ? "" : explanation?.cause_status === "hypothesis" ? "Гипотеза по телеметрии, требует проверки" : explanation?.observation_status === "observed" ? "Наблюдение · физическая причина не установлена" : "");
-    text("detail-observed-at", !onPlan && explanation?.evaluated_at ? `Наблюдения на ${time(explanation.evaluated_at, true)} МСК` : "");
     const observations = onPlan ? [] : list(explanation?.observations)
-      .filter(item => item.kind !== "data_quality" && item.title !== explanation?.summary && item.evidence)
-      .slice(0, 2).map(item => item.evidence);
+      .filter(item => item.kind !== "data_quality" && item.code !== "current_deviation" && item.title !== explanation?.summary && item.evidence)
+      .slice(0, 1).map(item => item.title);
     const modelFactors = onPlan ? [] : list(modelExplanation?.factors)
       .filter(item => item && finite(item.effect_s))
       .sort((left, right) => Math.abs(right.effect_s) - Math.abs(left.effect_s))
-      .slice(0, 2)
-      .map(item => `Фактор модели — ${item.title}: ${item.effect_s >= 0 ? "повышает" : "снижает"} прогноз примерно на ${Math.abs(item.effect_s).toFixed(0)} с`);
+      .slice(0, 1)
+      .map(item => `Вклад модели — ${item.title}: ${item.effect_s >= 0 ? "+" : "−"}${Math.abs(item.effect_s).toFixed(0)} с`);
     const reasons = [...observations, ...modelFactors];
     const reasonsKey = JSON.stringify(reasons);
     if ($("detail-observations").dataset.content !== reasonsKey) {
@@ -617,8 +603,7 @@
   }
 
   function renderIncidents() {
-    const route = $("route-filter").value;
-    const incidents = list(snapshot?.incidents).filter((incident) => route === "all" || idOf(incident.route_id) === route).slice().sort((a, b) => (timestamp(b.created_at) || 0) - (timestamp(a.created_at) || 0));
+    const incidents = list(snapshot?.incidents).slice().sort((a, b) => (timestamp(b.created_at) || 0) - (timestamp(a.created_at) || 0));
     text("timeline-count", incidents.length);
     $("timeline-empty").hidden = incidents.length > 0;
     const clock = timestamp(snapshot?.clock_time || snapshot?.server_time);
@@ -713,7 +698,6 @@
   function render() {
     const ctx = snapshot?.context;
     text("context-summary", ctx ? `План: ${{synthetic_generator:"наш генератор",builtin_demo:"быстрое демо",live_context:"загруженный контекст"}[ctx.source] || ctx.source} · ${ctx.vehicles} ТС · ${ctx.planned_visits} посещений · источник отклонения: ${ctx.arrival_mode === "gps" ? "GPS" : ctx.arrival_mode === "csv_snapshot" ? "points.csv" : "внешние события"}` : "План пока не загружен");
-    renderRouteOptions();
     const vehicles = filteredVehicles();
     if (!vehicles.some((vehicle) => idOf(vehicle.tr_id) === selectedId)) selectedId = vehicles.length ? idOf(vehicles[0].tr_id) : null;
     renderSummary();
@@ -732,10 +716,9 @@
     const ctx = snapshot?.context;
     const source = active ? snapshot.replay?.deviation_source || "csv_snapshot" : ctx?.arrival_mode;
     text("input-source-badge", `Отклонение: ${source === "gps" ? "GPS + план" : source === "csv_snapshot" ? "готовое points.csv" : snapshot?.mode === "demo" ? "демо-прибытия" : source ? "внешние события" : "ожидание"}`);
-    if (!active) { text("replay-active-source", "Выберите архив"); return; }
+    if (!active) return;
     const replay = snapshot.replay;
     const split = replay.dataset_split || "validate";
-    text("replay-active-source", `${split} · ${source === "gps" ? "считаем сами по GPS" : "готовое отклонение CSV"}`);
     const signature = JSON.stringify([split, replay.start, replay.end, replay.timezone, replay.selection_mode, replay.tr_ids, source, replay.warmup_minutes]);
     if (signature !== replayConfigSignature) {
       replayConfigSignature = signature;
@@ -818,22 +801,28 @@
   function resetSelection() {
     selectedId = null;
     incidentSignature = "";
-    $("route-filter").value = "all";
-    $("risk-filter").value = "all";
+    $("risk-red").checked = false;
+    $("risk-amber").checked = false;
     $("vehicle-search").value = "";
   }
 
-  function selectVehicle(id) {
+  function selectVehicle(id, navigate = false) {
     const vehicle = list(snapshot?.vehicles).find((item) => idOf(item.tr_id) === idOf(id));
     if (!vehicle) { toast("Автобус уже отсутствует в текущем состоянии."); return; }
     // Selecting an incident should also work when a table filter hides the vehicle.
     if (!filteredVehicles().some((item) => idOf(item.tr_id) === idOf(id))) {
-      $("route-filter").value = "all";
-      $("risk-filter").value = "all";
+      $("risk-red").checked = false;
+      $("risk-amber").checked = false;
       $("vehicle-search").value = "";
     }
     selectedId = idOf(id);
     render();
+    if (navigate) {
+      window.location.hash = "map-section";
+      $("map-section").scrollIntoView({behavior: "smooth", block: "start"});
+      map?.invalidateSize({pan: false});
+      focusVehicle();
+    }
   }
 
   function toast(message) {
@@ -894,11 +883,11 @@
     } finally { busy = false; setButtonBusy(); }
   }
 
-  ["route-filter", "risk-filter"].forEach((id) => $(id).addEventListener("change", render));
+  ["risk-red", "risk-amber"].forEach((id) => $(id).addEventListener("change", render));
   $("vehicle-search").addEventListener("input", render);
   ["vehicle-table-body", "incident-timeline", "attention-list"].forEach((id) => $(id).addEventListener("click", (event) => {
     const target = event.target.closest("[data-vehicle-id]");
-    if (target) selectVehicle(target.dataset.vehicleId);
+    if (target) selectVehicle(target.dataset.vehicleId, true);
   }));
   document.querySelectorAll("[data-mode]").forEach((button) => button.addEventListener("click", () => {
     if (button.dataset.mode === "replay") {
@@ -940,6 +929,7 @@
   window.addEventListener("pagehide", () => clearTimeout(pollTimer));
   syncNavigation();
   render();
+  window.RouteGeometry?.load().then(() => { routeGeometrySignature = ""; renderRouteGeometry(); });
   loadCustomMetadata();
   poll();
 })();

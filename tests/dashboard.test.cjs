@@ -52,4 +52,17 @@ for (const [value, status, expected] of [
 ]) {
   assert.equal(probabilityLabel(value,status),expected); checks++;
 }
+const formatSource = source.slice(source.indexOf('  const duration ='), source.indexOf('  const probabilityLabel ='));
+const format = vm.runInNewContext(formatSource + '\n;({delay});', {finite: Number.isFinite});
+for (const [value, compact, expected] of [
+  [-75,false,'Опережение на 1 мин 15 с'], [-75,true,'Опережение 1:15'],
+  [-15,false,'Опережение на 15 с'], [75,true,'+1:15'], [null,false,'По расписанию'],
+]) { assert.equal(format.delay(value,compact), expected); checks++; }
+const filterSource = source.slice(source.indexOf('  const riskAllowed ='), source.indexOf('  function filteredVehicles'));
+const riskAllowed = vm.runInNewContext(filterSource + '\n;riskAllowed;');
+for (const [band, red, amber, expected] of [
+  ['unknown',false,false,true], ['blue',false,false,true], ['red',true,false,true],
+  ['amber',true,false,false], ['red',false,true,false], ['amber',false,true,true],
+  ['red',true,true,true], ['amber',true,true,true], ['green',true,true,false],
+]) { assert.equal(riskAllowed(band,red,amber),expected); checks++; }
 console.log(JSON.stringify({passed:true,checks,scope:'display thresholds, missing/stale data, validated vs transferred probability'}));
