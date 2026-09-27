@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "amber_from_s": 60,
+  "red_above_s": 150,
+  "early_below_s": -30,
+  "transfer_from_s": 150,
+  "donor_max_delay_s": 60
+}

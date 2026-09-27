@@ -2,6 +2,7 @@
 from typing import Literal
 from pydantic import AwareDatetime, Field, StrictBool
 from common.contracts import Contract, Prediction, PredictionRequest, ProbabilityStatus, StopTarget
+from common.risk import RiskPolicy
 from backend.arrivals import CurrentDeviation
 from backend.engine import Route
 from backend.diagnostics import Explanation
@@ -152,6 +153,7 @@ class SectionRisk(RiskAggregate):
 class DashboardState(Contract):
     server_time: AwareDatetime
     clock_time: AwareDatetime
+    risk_policy: RiskPolicy
     mode: Literal['demo','live','replay','generator']
     context: dict = Field(default_factory=dict)
     gps_arrivals: list[dict] = Field(default_factory=list)

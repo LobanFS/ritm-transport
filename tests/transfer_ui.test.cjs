@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../dashboard/app.js'), 'utf8');
+const riskPolicy = JSON.parse(fs.readFileSync(path.join(__dirname, '../common/risk_policy.json'), 'utf8'));
 const bands = source.slice(source.indexOf('  const RISK ='), source.indexOf('  const $ ='));
 const gate = source.slice(source.indexOf('  const effectiveRisk ='), source.indexOf('  const availabilityLabel ='));
 const transfer = source.slice(source.indexOf('  const transferMatches ='), source.indexOf('  function createTableRow'));
@@ -12,10 +13,10 @@ assert.ok(transfer.includes('function showTransferDonor'), 'extract the actual t
 const bus = (id, delay = 240) => ({
   tr_id: id, label: `Автобус ${id}`, route_id: `route-${id}`, status: 'fresh',
   lat: 55.75, lon: 37.62, prediction_availability: {code: 'ready'},
-  prediction: {risk: delay > 150 ? 'red' : 'green', predicted_delay_s: delay,
+  prediction: {risk: delay > riskPolicy.red_above_s ? 'red' : delay >= riskPolicy.amber_from_s ? 'amber' : 'green', predicted_delay_s: delay,
     target: {id: `stop-${id}`, name: `Остановка ${id}`, scheduled_at: '2026-09-27T12:12:00Z'}},
 });
-const state = () => ({context: {version: 1, loaded_at: '2026-09-27T12:00:00Z'},
+const state = () => ({risk_policy: riskPolicy, context: {version: 1, loaded_at: '2026-09-27T12:00:00Z'},
   clock_time: '2026-09-27T12:00:00Z', vehicles: [bus('A'), bus('B'), bus('D', 20)]});
 function advice(snapshot, targetId = 'A') {
   const target = snapshot.vehicles.find(v => v.tr_id === targetId);
@@ -136,6 +137,38 @@ async function check(name, test) {
     h.api.showTransferDonor(); h.api.renderTransfer();
     assert.equal(h.centres.length, 0); assert.equal(h.requests.length, 0);
     assert.equal(h.el('detail-transfer-panel').hidden, true);
+  });
+  await check('exact intervention boundary requests advice and accepts a donor at the maximum delay', async () => {
+    const h = harness();
+    h.scope.snapshot.vehicles[0].prediction.predicted_delay_s = riskPolicy.transfer_from_s;
+    h.scope.snapshot.vehicles[2].prediction.predicted_delay_s = riskPolicy.donor_max_delay_s;
+    h.api.renderTransfer(); assert.equal(h.requests.length, 1);
+    h.requests[0].resolve(advice(h.scope.snapshot)); await flush();
+    assert.equal(h.el('detail-transfer-panel').hidden, false);
+    assert.equal(h.el('transfer-donor-button').hidden, false);
+    h.api.showTransferDonor(); assert.equal(h.centres.length, 1);
+  });
+  await check('missing or incomplete risk policy disables requests and existing actions', async () => {
+    for (const policy of [undefined, {}, {...riskPolicy, donor_max_delay_s: null}]) {
+      const h = harness(); h.scope.transferAdvice = advice(h.scope.snapshot);
+      h.scope.snapshot.risk_policy = policy;
+      h.api.paintTransfer(); h.api.showTransferDonor(); h.api.renderTransfer();
+      assert.equal(h.el('detail-transfer-panel').hidden, true);
+      assert.equal(h.requests.length, 0); assert.equal(h.centres.length, 0);
+      assert.equal(h.scope.transferAdvice, null);
+    }
+  });
+  await check('what-if and donor eligibility follow changed API policy without local defaults', async () => {
+    const h = harness();
+    h.scope.snapshot.risk_policy = {...riskPolicy, transfer_from_s: 300, donor_max_delay_s: 10};
+    h.api.renderTransfer(); assert.equal(h.requests.length, 0);
+    h.scope.snapshot.vehicles[0].prediction.predicted_delay_s = 300;
+    h.api.renderTransfer(); assert.equal(h.requests.length, 1);
+    h.requests[0].resolve(advice(h.scope.snapshot)); await flush();
+    assert.equal(h.el('transfer-donor-button').hidden, true);
+    h.scope.snapshot.vehicles[2].prediction.predicted_delay_s = 10;
+    h.api.paintTransfer(); assert.equal(h.el('transfer-donor-button').hidden, false);
+    h.api.showTransferDonor(); assert.equal(h.centres.length, 1);
   });
   await check('request failure never falls back to an actionable scenario', async () => {
     const h = harness(); h.api.renderTransfer(); h.requests[0].reject(new Error('offline')); await flush();

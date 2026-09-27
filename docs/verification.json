@@ -1,12 +1,13 @@
 {
   "checked_at": "2026-09-27T18:09:39.941893+00:00",
   "python_tests": {
-    "passed": 741,
+    "passed": 776,
     "failed": 0,
-    "note": "Full suite with local TCP sockets enabled; 10.52 s. Includes 129 concurrent NDTP clients, 257-vehicle ML batching and atomic archive timeout."
+    "checked_at": "2026-09-27T19:03:30.041032+00:00",
+    "note": "Full suite: 10.36 s. Includes risk boundaries, legacy ML responses, incidents, freshness, GPS, NDTP, replay and what-if."
   },
   "dashboard_checks": {
-    "passed": 85,
+    "passed": 116,
     "browser": {
       "map_controls_on_left": false,
       "neutral_route_and_stops": false,
@@ -46,9 +47,11 @@
       "observed_cause_preserved_without_unknown_status": true
     },
     "geometry_checks": 13,
-    "transfer_checks": 13,
+    "transfer_checks": 16,
     "fleet_checks": 15,
-    "checked_at": "2026-09-27T18:24:00.746690+00:00"
+    "checked_at": "2026-09-27T18:24:00.746690+00:00",
+    "main_dashboard_checks": 85,
+    "unit_tests_checked_at": "2026-09-27T19:03:30.041032+00:00"
   },
   "docker_start": {
     "train": true,
@@ -239,5 +242,50 @@
       "Per-request ML batches, protocol frame limits and bounded operational journals are retained.",
       "Existing 40-vehicle Docker performance result above is from its recorded timestamp; these scale boundary tests do not establish a new throughput figure."
     ]
+  },
+  "risk_policy": {
+    "checked_at": "2026-09-27T19:03:30.041032+00:00",
+    "contract": {
+      "version": 1,
+      "amber_from_s": 60.0,
+      "red_above_s": 150.0,
+      "early_below_s": -30.0,
+      "transfer_from_s": 150.0,
+      "donor_max_delay_s": 60.0
+    },
+    "python_tests_passed": 776,
+    "javascript_checks_passed": 129,
+    "docker_start": {
+      "validate": true,
+      "train": true,
+      "trained_model": true
+    },
+    "checks": [
+      "API and served JavaScript agree at 60,120,130,150,150.001 seconds",
+      "Backend normalizes legacy ML risk before summary and incidents",
+      "What-if starts at 150s; donor delay up to 60s",
+      "Probability event remains target_delay_s >120",
+      "Unknown and expired forecasts remain unavailable"
+    ],
+    "browser": {
+      "tr_id": 9000016,
+      "prediction_s": 121.02408992409684,
+      "api_risk": "amber",
+      "browser_marker": "yellow",
+      "browser_card": "+2 мин 1 с",
+      "probability_label": "≈46% · приближённо"
+    },
+    "local_report": "artifacts/risk-policy-check/docker-api.json",
+    "source_sha256": {
+      "common/risk_policy.json": "7871cbd95a6083c8befe22d9dbb9a73444386c22e6747d24047923f2f57ccdfd",
+      "common/risk.py": "3c9e940a56a56a01c30af1dbf3a26d891373851f91d972a99c19a45721ee877e",
+      "common/contracts.py": "d5eb53e687f729e0145ed2acca584d4638b5c87955a79d98db673660f801db94",
+      "common/state.py": "9d5f566451115bd1e79c4f55784bc3f544873ad3eae7baec27195cbc97ad0ccf",
+      "backend/engine.py": "2623082b46000fcb40ded11c193b34e8f0ab8c7f4f7041c56e74e23a3c966c55",
+      "backend/transfer_advisor.py": "ab4f5c188c64eb328f8264f3aae80061bfeb01e1cc84f5f1028b7b0326acae33",
+      "ml_service/learned.py": "e0e98ecb15cc30f1519ecc00e9b3b75a5238b28b4e027b8df0c2069ff6d13853",
+      "dashboard/app.js": "d83e9e4200d8e3f2e8f6df6c2017cec77a147694e1f5303051443959da47f372"
+    },
+    "limitations": "Checks cover risk classification and integration; model accuracy and previous performance measurements were not re-estimated."
   }
 }

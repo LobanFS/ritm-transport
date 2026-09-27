@@ -12,9 +12,10 @@ from typing import Mapping
 
 from backend.line_identity import has_line_geometry, same_line
 from common.transfer import DonorImpact, TransferAdvice, TransferScenario, TransferVehicle
+from common.risk import RISK_POLICY
 
-NEEDED_DELAY_S = 150
-MAX_DONOR_DELAY_S = 60
+NEEDED_DELAY_S = RISK_POLICY.transfer_from_s
+MAX_DONOR_DELAY_S = RISK_POLICY.donor_max_delay_s
 MAX_DISTANCE_M = 5000
 MAX_DATA_AGE_S = 60
 MIN_BENEFIT_S = 60

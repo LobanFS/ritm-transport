@@ -31,7 +31,7 @@ from backend.generator_bridge import ProducerState
 from common.contracts import PredictionRequest, baseline
 from generator.scenarios import DURATION_S, GeneratorSession, ResetRequest, START
 
-THRESHOLD_S = 120.0  # Уже существующий красный порог; не подобран по test.
+THRESHOLD_S = 120.0  # Факт задержки >2 минут; отдельная метка, не порог красного сигнала.
 
 
 def dt(value: datetime | str) -> datetime:
@@ -306,9 +306,11 @@ async def main():
     parser.add_argument('--forecast-interval-s',type=int,choices=[1,5,15,30],default=15)
     args = parser.parse_args()
     args.output.mkdir(parents=True,exist_ok=True)
-    contract = dict(change='Evaluate existing alert policy; no model fitting or threshold tuning',
+    from common.risk import RISK_POLICY
+    contract = dict(change='Evaluate current alert policy against lateness >120s; no model fitting or threshold tuning',
         source='Synthetic generator seed42; known network; not an independent real-day test',
         threshold_s=THRESHOLD_S,forecast_interval_s=args.forecast_interval_s,
+        risk_policy=RISK_POLICY.model_dump(),
         model='remote HTTP ML' if args.ml_url else 'fixed persistence-v1 baseline',
         plan_window='(600,900] seconds to planned target at publication',
         early_window='[600,900] seconds to separately annotated onset of a NEW disruption',

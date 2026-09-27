@@ -14,6 +14,7 @@ from typing import Any
 from common.contracts import (
     Prediction, PredictionRequest, TransformerAnalysis, TransformerHistoryImpact, baseline,
 )
+from common.risk import risk_for_delay
 
 MODEL_VERSION = "swiss-transformer-hgbr-prior-v1"
 MODEL_SHA256 = "bfed9d9608fd707a634605900ac75d81e863309c29105c9b5183491965289905"
@@ -268,7 +269,7 @@ class LearnedModel:
         return result
 
     def response(self, request: PredictionRequest, value: float, explanation) -> Prediction:
-        risk = "red" if value > 120 else "amber" if value > 60 else "green"
+        risk = risk_for_delay(value)
         reasons = ["Прогноз HGBR по плану и prior причинного Transformer"]
         if request.features.telemetry_age_s is None or request.features.telemetry_age_s > 60:
             risk = "unknown"; reasons.append("Нет свежей валидной телеметрии")

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 REPOSITORY = "https://github.com/LobanFS/ritm-transport"
 GROUPS = {
-    "Общие контракты": ["common", "common.contracts", "common.state", "common.transfer"],
+    "Общие контракты": ["common", "common.contracts", "common.state", "common.transfer", "common.risk"],
     "Backend и входные данные": [
         "backend", "backend.app", "backend.engine", "backend.ndtp",
         "backend.arrivals", "backend.gps_arrivals", "backend.replay",

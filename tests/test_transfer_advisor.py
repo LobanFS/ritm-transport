@@ -8,6 +8,7 @@ import pytest
 from backend.app import create_app
 from backend.transfer_advisor import advise_transfer, same_line
 from common.contracts import StopTarget
+from common.risk import risk_for_delay
 
 T = datetime(2026, 1, 6, 12, tzinfo=timezone.utc)
 
@@ -20,7 +21,7 @@ def bus(tr_id, route, delay, lon=37.615, lat=55.75):
     return dict(tr_id=tr_id, label=f'Автобус {tr_id}', route_id=route, lon=lon, lat=lat,
                 status='fresh', age_s=0, event_time=T, prediction_availability={'code': 'ready'},
                 prediction=dict(issued_at=T, target=stop(f'target-{tr_id}', 720).model_dump(mode='json'),
-                                risk='red' if delay > 150 else 'green', predicted_delay_s=delay))
+                                risk=risk_for_delay(delay), predicted_delay_s=delay))
 
 
 @pytest.fixture
@@ -85,6 +86,25 @@ def test_no_intervention_for_minor_delay(inputs, delay):
     state, plan = inputs
     state['vehicles'][0]['prediction']['predicted_delay_s'] = delay
     assert advise_transfer(state, plan, 1).status == 'not_needed'
+
+
+@pytest.mark.parametrize('delay,risk', [(150, 'amber'), (150.001, 'red')])
+def test_transfer_still_starts_at_150_seconds_including_amber_boundary(inputs, delay, risk):
+    state, plan = inputs
+    forecast = state['vehicles'][0]['prediction']
+    forecast.update(predicted_delay_s=delay, risk=risk)
+    result = advise_transfer(state, plan, 1)
+    assert result.status == 'ready'
+    assert result.donor.tr_id == 2
+    assert forecast['risk'] == risk
+
+
+@pytest.mark.parametrize('delay,status', [(60, 'ready'), (60.001, 'unavailable')])
+def test_donor_may_have_exactly_one_minute_delay(inputs, delay, status):
+    state, plan = inputs
+    state['vehicles'] = state['vehicles'][:2]
+    state['vehicles'][1]['prediction'].update(predicted_delay_s=delay, risk=risk_for_delay(delay))
+    assert advise_transfer(state, plan, 1).status == status
 
 
 def test_excludes_late_and_unassessed_donors_instead_of_zero_filling(inputs):

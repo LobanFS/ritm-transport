@@ -14,6 +14,7 @@ import httpx
 from pydantic import AwareDatetime, Field, FiniteFloat, model_validator
 
 from common.contracts import Contract, DelayObservation, Features, ModelPlanContext, Prediction, PredictionRequest, StopTarget, Telemetry, baseline
+from common.risk import RISK_POLICY, risk_for_delay
 from backend.diagnostics import explain, usable_history
 from backend.arrivals import ArrivalConflict, ArrivalInput, CurrentDeviation
 
@@ -152,7 +153,9 @@ def gate_prediction(prediction: Prediction, *, telemetry_age_s: float | None,
     if target_reached:
         reasons.append('Посещение целевой остановки уже зарегистрировано; прогноз не является ранним предупреждением')
     if not reasons:
-        return prediction
+        # Не доверяем цвету старой ML-реплики, но сохраняем её отказ от оценки.
+        risk = 'unknown' if prediction.risk == 'unknown' else risk_for_delay(prediction.predicted_delay_s)
+        return prediction if risk == prediction.risk else prediction.model_copy(update={'risk': risk})
     return prediction.model_copy(update={
         'risk':'unknown', 'probability_late':None, 'probability_status':'unavailable',
         'probability_note':('Целевое посещение уже зарегистрировано' if target_reached
@@ -723,7 +726,7 @@ class Engine:
                 self.incident_keys.append(key)
                 self.incidents.appendleft(dict(id=key,tr_id=p.tr_id,route_id=self.vehicles[p.tr_id].route_id,
                     created_at=publication_clock,data_cutoff=p.issued_at,published_at=published_at,
-                    target_time=p.target.scheduled_at,risk=p.risk,
+                    target_time=p.target.scheduled_at,risk=current.risk,
                     target_name=p.target.name,horizon_reference='scheduled_arrival',
                     estimated_arrival_at=p.target.scheduled_at+timedelta(seconds=p.predicted_delay_s),
                     estimated_lead_time_s=lead+p.predicted_delay_s,
@@ -794,6 +797,7 @@ class Engine:
         from backend.risk_summary import summarize
         route_risks, section_risks = summarize(vehicles, self.schedule, {r.route_id:r.name for r in self.routes})
         return dict(server_time=utcnow(),clock_time=now,mode=self.mode,
+            risk_policy=RISK_POLICY.model_dump(mode='json'),
             context=dict(version=self.version, loaded_at=self.context_loaded_at, arrival_mode=self.arrival_mode,
                          plan_version=self.plan_version, plan_timezone=self.plan_timezone, plan_complete=self.plan_complete,
                          vehicles=len(self.vehicles), planned_visits=sum(map(len,self.schedule.values())),

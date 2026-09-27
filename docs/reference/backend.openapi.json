@@ -838,6 +838,9 @@
             "format": "date-time",
             "title": "Clock Time"
           },
+          "risk_policy": {
+            "$ref": "#/components/schemas/RiskPolicy"
+          },
           "mode": {
             "type": "string",
             "enum": [
@@ -945,6 +948,7 @@
         "required": [
           "server_time",
           "clock_time",
+          "risk_policy",
           "mode",
           "demo",
           "health",
@@ -2796,6 +2800,51 @@
           "note"
         ],
         "title": "ReplayState"
+      },
+      "RiskPolicy": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "amber_from_s": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Amber From S"
+          },
+          "red_above_s": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Red Above S"
+          },
+          "early_below_s": {
+            "type": "number",
+            "exclusiveMaximum": 0.0,
+            "title": "Early Below S"
+          },
+          "transfer_from_s": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Transfer From S"
+          },
+          "donor_max_delay_s": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Donor Max Delay S"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version",
+          "amber_from_s",
+          "red_above_s",
+          "early_below_s",
+          "transfer_from_s",
+          "donor_max_delay_s"
+        ],
+        "title": "RiskPolicy"
       },
       "Route": {
         "properties": {

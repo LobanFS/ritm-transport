@@ -141,7 +141,7 @@ def test_unbounded_feature_still_requires_a_finite_number(client, field):
     assert field in str(response.json()["detail"])
 
 
-@pytest.mark.parametrize("age_s,risk", [(60, "red"), (60.001, "unknown"), (None, "unknown")])
+@pytest.mark.parametrize("age_s,risk", [(60, "amber"), (60.001, "unknown"), (None, "unknown")])
 def test_missing_or_stale_gps_changes_risk_without_fabricating_delay(client, age_s, risk):
     """Свежесть GPS ограничивает цвет риска; численный fallback остаётся явной подсказкой."""
     response = client.post("/predict", json=prediction_request(delay_s=130, age_s=age_s))

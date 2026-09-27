@@ -11,17 +11,25 @@
     green: { label: "По плану", short: "По плану", color: "#328a6d", rank: 3 },
     unknown: { label: "По плану", short: "По плану", color: "#328a6d", rank: 3 },
   };
-  // Presentation bands are independent of P(delay > 120s) and the model contract.
+  // Backend and ML publish the same policy; P(delay > 120s) is a separate metric.
+  const riskPolicy = () => {
+    const policy = snapshot?.risk_policy;
+    return policy && ["amber_from_s", "red_above_s", "early_below_s", "transfer_from_s", "donor_max_delay_s"]
+      .every(key => typeof policy[key] === "number" && Number.isFinite(policy[key])) ? policy : null;
+  };
   function delayBand(seconds) {
-    if (typeof seconds !== "number" || !Number.isFinite(seconds)) return "unknown";
-    if (seconds > 150) return "red";
-    if (seconds >= 60) return "amber";
-    if (seconds < -30) return "blue";
+    const policy = riskPolicy();
+    if (!policy || typeof seconds !== "number" || !Number.isFinite(seconds)) return "unknown";
+    if (seconds > policy.red_above_s) return "red";
+    if (seconds >= policy.amber_from_s) return "amber";
+    if (seconds < policy.early_below_s) return "blue";
     return "green";
   }
   function delayColor(seconds, band = delayBand(seconds)) {
+    const policy = riskPolicy();
+    if (!policy) return RISK.unknown.color;
     if (band !== "red") return RISK[band]?.color || RISK.unknown.color;
-    const mix = Math.min(1, Math.max(0, (seconds - 150) / 450));
+    const mix = Math.min(1, Math.max(0, (seconds - policy.red_above_s) / 450));
     const start = [215, 78, 75], end = [103, 17, 48];
     return "#" + start.map((v, i) => Math.round(v + (end[i] - v) * mix).toString(16).padStart(2, "0")).join("");
   }
@@ -586,11 +594,15 @@
     && advice.context_version === state?.context?.version
     && (!advice.meeting_stop || (idOf(advice.meeting_stop.id) === idOf(vehicle.prediction?.target?.id)
       && timestamp(advice.meeting_stop.scheduled_at) === timestamp(vehicle.prediction?.target?.scheduled_at)));
+  const transferEligible = vehicle => !!riskPolicy() && !!vehicle
+    && finite(displayedDelay(vehicle)) && displayedDelay(vehicle) >= riskPolicy().transfer_from_s;
+  const transferDonorEligible = vehicle => !!riskPolicy() && !!vehicle
+    && finite(displayedDelay(vehicle)) && displayedDelay(vehicle) <= riskPolicy().donor_max_delay_s;
 
   function renderTransfer() {
     const panel = $("detail-transfer-panel");
     const vehicle = chosenVehicle();
-    const eligible = vehicle && finite(displayedDelay(vehicle)) && displayedDelay(vehicle) >= 150;
+    const eligible = transferEligible(vehicle);
     panel.hidden = !eligible;
     if (!eligible) { transferKey = ""; transferAdvice = null; return; }
     const key = JSON.stringify([snapshot.context?.version, snapshot.context?.loaded_at,
@@ -623,12 +635,12 @@
   function paintTransfer() {
     const advice = transferAdvice;
     const vehicle = chosenVehicle();
-    const eligible = vehicle && finite(displayedDelay(vehicle)) && displayedDelay(vehicle) >= 150;
+    const eligible = transferEligible(vehicle);
     $("detail-transfer-panel").hidden = !eligible || advice?.status === "not_needed";
     if (!eligible) return;
     const donor = list(snapshot?.vehicles).find(v => idOf(v.tr_id) === idOf(advice?.donor?.tr_id));
     const ready = advice?.status === "ready" && transferMatches(advice, vehicle, snapshot)
-      && donor && finite(displayedDelay(donor)) && displayedDelay(donor) <= 60;
+      && transferDonorEligible(donor);
     text("transfer-summary", ready ? `Предложение: подать ${vehicleName(donor).toLocaleLowerCase("ru-RU")}`
       : advice?.status === "ready" ? "Проверяем доступность ближайших автобусов…"
       : advice?.reason || "Ищем автобус на ближайших линиях…");
@@ -650,11 +662,11 @@
   function showTransferDonor() {
     const advice = transferAdvice;
     const target = chosenVehicle();
-    if (apiStale() || !target || !finite(displayedDelay(target)) || displayedDelay(target) < 150
+    if (apiStale() || !transferEligible(target)
       || !transferMatches(advice, target, snapshot) || advice.status !== "ready") return;
     const donor = list(snapshot?.vehicles).find(v => idOf(v.tr_id) === idOf(advice.donor.tr_id));
     const position = donor && latLng(donor.lon, donor.lat);
-    if (!map || !position || !finite(displayedDelay(donor)) || displayedDelay(donor) > 60) {
+    if (!map || !position || !transferDonorEligible(donor)) {
       toast("Состояние кандидата изменилось. Обновляем рекомендацию."); return;
     }
     // Keep the receiving bus selected so its scenario and route remain visible.

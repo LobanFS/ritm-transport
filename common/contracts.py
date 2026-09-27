@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Literal
 from zoneinfo import ZoneInfo
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, FiniteFloat, StrictBool, model_validator
+from common.risk import risk_for_delay
 
 
 class Contract(BaseModel):
@@ -203,7 +204,7 @@ class Prediction(Contract):
 def baseline(request: PredictionRequest, *, fallback: bool = False) -> Prediction:
     """Перенос выданного текущего отставания; не обученная модель и не вероятность."""
     value = request.current_delay_s
-    risk = "unknown" if value is None else "red" if value > 120 else "amber" if value > 60 else "green"
+    risk = risk_for_delay(value)
     reasons = ["Текущее отставание не известно"] if value is None else ["Перенос текущего отклонения от расписания"]
     if request.features.telemetry_age_s is None or request.features.telemetry_age_s > 60:
         risk = "unknown"

@@ -75,7 +75,7 @@ def test_unknown_and_unmatured_truth_is_not_a_negative(arrivals):
 
 
 @pytest.mark.parametrize('delay,is_late',[(120,False),(120.001,True),(-300,False)])
-def test_fixed_late_threshold_matches_existing_red_policy(delay,is_late):
+def test_late_outcome_threshold_is_independent_of_display_risk(delay,is_late):
     result = evaluate(arrivals={(1,'target'):at(1400+delay)},events=[])
     assert result['target_outcomes']['late']==int(is_late)
 
