@@ -12,12 +12,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 REPOSITORY = "https://github.com/LobanFS/ritm-transport"
 GROUPS = {
-    "Общие контракты": ["common", "common.contracts", "common.state"],
+    "Общие контракты": ["common", "common.contracts", "common.state", "common.transfer"],
     "Backend и входные данные": [
         "backend", "backend.app", "backend.engine", "backend.ndtp",
         "backend.arrivals", "backend.gps_arrivals", "backend.replay",
         "backend.diagnostics", "backend.segment_observations", "backend.risk_summary",
-        "backend.generator_bridge", "backend.learning_store",
+        "backend.generator_bridge", "backend.learning_store", "backend.transfer_advisor",
     ],
     "ML-сервис": [
         "ml_service", "ml_service.app", "ml_service.learned", "ml_service.hybrid",
@@ -123,7 +123,7 @@ def main():
         html = remove_unpublished_links(html, f"{name}.html")
         # PyDoc также печатает значения констант Path, например ROOT.
         html = html.replace(str(ROOT), ".")
-        (out / f"{name}.html").write_text(html, encoding="utf-8")
+        (out / f"{name}.html").write_text("\n".join(line.rstrip() for line in html.splitlines()) + "\n", encoding="utf-8")
 
     (out / "index.html").write_text(index_html(), encoding="utf-8")
     (out.parent / "index.html").write_text(index_html("reference/"), encoding="utf-8")

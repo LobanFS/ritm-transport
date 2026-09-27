@@ -1,11 +1,12 @@
 {
-  "checked_at": "2026-09-27T17:19:37.532465+00:00",
+  "checked_at": "2026-09-27T17:42:21.636561+00:00",
   "python_tests": {
-    "passed": 685,
-    "failed": 0
+    "passed": 712,
+    "failed": 0,
+    "note": "699 passed in sandbox; 13 TCP tests repeated with local socket permission. All 48 NDTP checks passed."
   },
   "dashboard_checks": {
-    "passed": 57,
+    "passed": 70,
     "browser": {
       "map_controls_on_left": false,
       "neutral_route_and_stops": false,
@@ -26,9 +27,15 @@
         390
       ],
       "no_horizontal_overflow": true,
-      "osm_attribution_without_tiles": true
+      "osm_attribution_without_tiles": true,
+      "fleet_on_map_left": true,
+      "fleet_two_columns": true,
+      "transfer_real_archive": true,
+      "transfer_focus_preserves_target": true,
+      "transfer_hidden_when_not_needed": true
     },
-    "geometry_checks": 13
+    "geometry_checks": 13,
+    "transfer_checks": 13
   },
   "docker_start": {
     "train": true,
@@ -158,5 +165,32 @@
     },
     "runtime_external_routing_requests": 0,
     "scope": "Display only, based on planned stops; unmatched legs remain schematic. Not a verified bus route and not an ML input."
+  },
+  "transfer_advice": {
+    "read_only": true,
+    "method": "nearby-plan-scenario-v1",
+    "scenario_assumptions": {
+      "radius_m": 5000,
+      "distance_multiplier": 1.4,
+      "speed_kmh": 20,
+      "setup_s": 120,
+      "target_delay_min_s": 150,
+      "donor_delay_max_s": 60
+    },
+    "checked_train_example": {
+      "clock_time": "2026-01-06T12:47:00Z",
+      "target_tr_id": 133957,
+      "donor_tr_id": 9000014,
+      "distance_m": 2470,
+      "relocation_s": 743,
+      "earlier_by_s": 151,
+      "donor_planned_stops_affected": 1
+    },
+    "limitations": [
+      "Scenario ETA uses straight-line distance and fixed assumptions, not observed road travel time.",
+      "Vehicle load, reserve, driver shifts and permission to reassign require dispatcher confirmation.",
+      "Similar plans are grouped geometrically; actual route IDs are absent in bundled CSV.",
+      "Improvement applies to service at one target stop, not a new ML prediction or network-wide optimization."
+    ]
   }
 }

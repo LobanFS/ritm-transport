@@ -59,6 +59,12 @@
   let followSelected = false;
   let replayConfigSignature = "";
   let toastTimer = null;
+  let transferAdvice = null;
+  let transferKey = "";
+  let transferPending = "";
+  let transferCheckedAt = 0;
+  let transferClock = null;
+  let transferSerial = 0;
   const markers = new Map();
   const tableRows = new Map();
 
@@ -169,10 +175,12 @@
 
   const mapCardWidth = () => window.innerWidth > 1100
     ? (document.querySelector(".vehicle-panel")?.getBoundingClientRect().width || 0) + 28 : 0;
+  const mapFleetWidth = () => window.innerWidth > 1100
+    ? (document.querySelector(".fleet-panel")?.getBoundingClientRect().width || 0) + 28 : 0;
 
   function centreVehicle(position, zoom = map.getZoom()) {
     map.setView(position, zoom, {animate: false});
-    const offset = mapCardWidth() / 2;
+    const offset = (mapCardWidth() - mapFleetWidth()) / 2;
     if (offset) map.panBy([offset, 0], {animate: false});
   }
 
@@ -195,7 +203,7 @@
       list(route.stops).forEach(stop => { const p = latLng(stop.lon, stop.lat); if (p) points.push(p); });
     });
     filteredVehicles().filter(v => !onlySelectedRoute || idOf(v.route_id) === routeId).forEach(v => { const p = latLng(v.lon, v.lat); if (p) points.push(p); });
-    if (points.length) { setFollow(false); map.fitBounds(points, { paddingTopLeft: [48, 48], paddingBottomRight: [48 + mapCardWidth(), 48], maxZoom: 18, animate: false }); }
+    if (points.length) { setFollow(false); map.fitBounds(points, { paddingTopLeft: [48 + mapFleetWidth(), 48], paddingBottomRight: [48 + mapCardWidth(), 100], maxZoom: 18, animate: false }); }
     else toast("Нет координат для выбранного маршрута.");
   }
 
@@ -402,7 +410,7 @@
       text("map-empty-text", "Подключите источник NDTP. Здесь появятся полученные автобусы.");
     } else if (!vehicles.length && list(snapshot.vehicles).length) {
       text("map-empty-title", "По фильтрам ничего не найдено");
-      text("map-empty-text", "Выберите другой маршрут, состояние или измените поиск.");
+      text("map-empty-text", "Измените поиск или снимите фильтры риска.");
     } else if (vehicles.length) {
       text("map-empty-title", "Пока нет координат");
       text("map-empty-text", "Автобусы доступны в списке. Ждём валидную телеметрию.");
@@ -545,28 +553,108 @@
 
   }
 
+  // A scenario is a separate estimate: it never changes the model forecast or plan.
+  const transferMatches = (advice, vehicle, state) => !!advice && !!vehicle
+    && idOf(advice.target?.tr_id) === idOf(vehicle.tr_id)
+    && advice.context_version === state?.context?.version
+    && (!advice.meeting_stop || (idOf(advice.meeting_stop.id) === idOf(vehicle.prediction?.target?.id)
+      && timestamp(advice.meeting_stop.scheduled_at) === timestamp(vehicle.prediction?.target?.scheduled_at)));
+
+  function renderTransfer() {
+    const panel = $("detail-transfer-panel");
+    const vehicle = chosenVehicle();
+    const eligible = vehicle && finite(displayedDelay(vehicle)) && displayedDelay(vehicle) >= 150;
+    panel.hidden = !eligible;
+    if (!eligible) { transferKey = ""; transferAdvice = null; return; }
+    const key = JSON.stringify([snapshot.context?.version, snapshot.context?.loaded_at,
+      vehicle.tr_id, vehicle.prediction?.target?.id, vehicle.prediction?.target?.scheduled_at]);
+    if (key !== transferKey) {
+      markers.forEach(marker => marker.layer.closeTooltip());
+      transferKey = key; transferAdvice = null; transferCheckedAt = 0; transferClock = null;
+    }
+    const clock = timestamp(snapshot.clock_time);
+    const changedTime = clock !== null && (transferClock === null || Math.abs(clock - transferClock) >= 5000);
+    if (transferPending !== key && (changedTime || Date.now() - transferCheckedAt >= 5000)) {
+      transferPending = key;
+      transferCheckedAt = Date.now();
+      transferClock = clock;
+      const serial = ++transferSerial;
+      request(`/api/v1/vehicles/${encodeURIComponent(vehicle.tr_id)}/transfer-advice`).then(advice => {
+        if (serial !== transferSerial || transferKey !== key || !transferMatches(advice, chosenVehicle(), snapshot)) return;
+        transferAdvice = advice;
+        paintTransfer();
+      }).catch(() => {
+        if (serial === transferSerial && transferKey === key) {
+          transferAdvice = {status: "unavailable", reason: "Не удалось рассчитать вариант подачи. Повторяем запрос."};
+          paintTransfer();
+        }
+      }).finally(() => { if (transferPending === key) transferPending = ""; });
+    }
+    paintTransfer();
+  }
+
+  function paintTransfer() {
+    const advice = transferAdvice;
+    const vehicle = chosenVehicle();
+    const eligible = vehicle && finite(displayedDelay(vehicle)) && displayedDelay(vehicle) >= 150;
+    $("detail-transfer-panel").hidden = !eligible || advice?.status === "not_needed";
+    if (!eligible) return;
+    const donor = list(snapshot?.vehicles).find(v => idOf(v.tr_id) === idOf(advice?.donor?.tr_id));
+    const ready = advice?.status === "ready" && transferMatches(advice, vehicle, snapshot)
+      && donor && finite(displayedDelay(donor)) && displayedDelay(donor) <= 60;
+    text("transfer-summary", ready ? `Предложение: подать ${vehicleName(donor).toLocaleLowerCase("ru-RU")}`
+      : advice?.status === "ready" ? "Проверяем доступность ближайших автобусов…"
+      : advice?.reason || "Ищем автобус на ближайших линиях…");
+    ["transfer-detail", "transfer-effect", "transfer-caveat", "transfer-donor-button"].forEach(id => { $(id).hidden = !ready; });
+    if (!ready) return;
+    const scenario = advice.scenario;
+    const distance = finite(scenario?.distance_m) ? (scenario.distance_m / 1000).toLocaleString("ru-RU", {maximumFractionDigits: 1}) : "—";
+    text("transfer-detail", `${advice.donor.route_name} → ${advice.meeting_stop.name}. ${distance} км по прямой · подача ≈${duration(scenario.relocation_s, true)}.`);
+    text("transfer-effect", `На остановке на ${duration(scenario.earlier_by_s)} раньше задерживающегося автобуса, не раньше плана.`);
+    const nextStop = advice.donor_impact?.next_stop_at;
+    const conflicts = advice.donor_impact?.planned_stops_during_transfer;
+    const impact = conflicts > 0 ? ` Затронуто плановых остановок на исходной линии: ${conflicts}.`
+      : nextStop ? ` Его ближайшая остановка — ${time(nextStop)}.` : "";
+    text("transfer-caveat", `Если автобус можно снять с линии.${impact} Подтверждает диспетчер.`);
+    $("transfer-caveat").title = list(advice.assumptions).join("\n");
+    $("transfer-donor-button").dataset.donorId = idOf(donor.tr_id);
+  }
+
+  function showTransferDonor() {
+    const advice = transferAdvice;
+    const target = chosenVehicle();
+    if (apiStale() || !target || !finite(displayedDelay(target)) || displayedDelay(target) < 150
+      || !transferMatches(advice, target, snapshot) || advice.status !== "ready") return;
+    const donor = list(snapshot?.vehicles).find(v => idOf(v.tr_id) === idOf(advice.donor.tr_id));
+    const position = donor && latLng(donor.lon, donor.lat);
+    if (!map || !position || !finite(displayedDelay(donor)) || displayedDelay(donor) > 60) {
+      toast("Состояние кандидата изменилось. Обновляем рекомендацию."); return;
+    }
+    // Keep the receiving bus selected so its scenario and route remain visible.
+    $("risk-red").checked = false;
+    $("risk-amber").checked = false;
+    $("vehicle-search").value = "";
+    setFollow(false);
+    renderMap(filteredVehicles());
+    renderTable(filteredVehicles());
+    centreVehicle(position, Math.max(map.getZoom(), 15));
+    const marker = markers.get(idOf(donor.tr_id));
+    if (marker) {
+      marker.layer.bindTooltip(node("span", "", `Кандидат · ${donor.tr_id}`), {direction: "top", className: "transfer-map-tooltip"}).openTooltip();
+    }
+  }
+
   function createTableRow(key) {
     const row = node("tr");
     row.dataset.vehicleId = key;
     const first = node("td");
-    const name = node("span", "bus-name");
-    const code = node("span", "route-chip");
-    const label = node("span");
-    name.append(code, label);
-    const id = node("span", "bus-id");
-    first.append(name, id);
-    const predicted = node("td", "delay-cell");
-    const stateCell = node("td");
-    const badge = node("span", "risk-badge");
-    stateCell.append(badge);
-    const age = node("td", "age-cell");
-    const action = node("td");
-    const button = node("button", "row-open", "›");
+    const button = node("button", "fleet-bus-button");
     button.type = "button";
     button.dataset.vehicleId = key;
-    action.append(button);
-    row.append(first, predicted, stateCell, age, action);
-    return { row, code, label, id, predicted, badge, age, button };
+    first.append(button);
+    const predicted = node("td", "delay-cell");
+    row.append(first, predicted);
+    return { row, predicted, button };
   }
 
   function renderTable(vehicles) {
@@ -577,20 +665,12 @@
       keep.add(key);
       let record = tableRows.get(key);
       if (!record) { record = createTableRow(key); tableRows.set(key, record); }
-      const risk = effectiveRisk(vehicle);
       record.row.classList.toggle("is-selected", key === selectedId);
-      record.code.textContent = String(routeCode(vehicle));
-      record.code.title = String(routeName(vehicle));
-      record.label.textContent = vehicleName(vehicle);
-      record.id.textContent = fullUI ? `ID ${vehicle.tr_id} · ${time(vehicle.event_time, true)} МСК` : "";
-      record.code.hidden = !fullUI && snapshot.mode === "replay";
+      record.button.textContent = vehicleName(vehicle).replace(/^Автобус\s*/i, "");
+      record.button.title = `${vehicleName(vehicle)} · ${routeName(vehicle)}`;
       record.predicted.textContent = delay(displayedDelay(vehicle), true);
       record.predicted.title = delay(displayedDelay(vehicle));
       record.predicted.style.color = vehicleColor(vehicle);
-      record.badge.textContent = risk === "unknown" ? availabilityLabel(vehicle) : RISK[risk].short;
-      record.badge.title = RISK[risk].label;
-      record.badge.className = `risk-badge risk-${risk === "unknown" ? "green" : risk}`;
-      record.age.textContent = duration(vehicle.age_s, true);
 
       record.button.setAttribute("aria-label", `Открыть: ${vehicleName(vehicle)}`);
       record.button.setAttribute("aria-pressed", String(key === selectedId));
@@ -704,6 +784,7 @@
     renderAttention();
     renderMap(vehicles);
     renderDetail();
+    renderTransfer();
     renderTable(vehicles);
     renderIncidents();
     renderHealth();
@@ -816,6 +897,7 @@
       $("vehicle-search").value = "";
     }
     selectedId = idOf(id);
+    markers.forEach(marker => marker.layer.closeTooltip());
     render();
     if (navigate) {
       window.location.hash = "map-section";
@@ -885,6 +967,7 @@
 
   ["risk-red", "risk-amber"].forEach((id) => $(id).addEventListener("change", render));
   $("vehicle-search").addEventListener("input", render);
+  $("transfer-donor-button").addEventListener("click", showTransferDonor);
   ["vehicle-table-body", "incident-timeline", "attention-list"].forEach((id) => $(id).addEventListener("click", (event) => {
     const target = event.target.closest("[data-vehicle-id]");
     if (target) selectVehicle(target.dataset.vehicleId, true);

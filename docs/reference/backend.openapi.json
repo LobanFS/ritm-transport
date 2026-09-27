@@ -70,6 +70,49 @@
         }
       }
     },
+    "/api/v1/vehicles/{tr_id}/transfer-advice": {
+      "get": {
+        "tags": [
+          "Диспетчер"
+        ],
+        "summary": "Transfer Advice",
+        "description": "Условный what-if подачи автобуса с другой линии; никаких команд ТС.\n\nСравнивает свежие GPS и прогнозы, исключает схожие геометрии планов.\nПодача оценивается по явному сценарию расстояния и скорости. Загрузка,\nрезерв и разрешение снять автобус с линии подтверждаются диспетчером.",
+        "operationId": "transfer_advice_api_v1_vehicles__tr_id__transfer_advice_get",
+        "parameters": [
+          {
+            "name": "tr_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tr Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferAdvice"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/incidents/export": {
       "get": {
         "tags": [
@@ -1062,6 +1105,62 @@
           "speed"
         ],
         "title": "DemoState"
+      },
+      "DonorImpact": {
+        "properties": {
+          "next_stop_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Stop Name"
+          },
+          "next_stop_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Stop At"
+          },
+          "planned_stops_during_transfer": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Planned Stops During Transfer"
+          },
+          "plan_conflict": {
+            "type": "boolean",
+            "title": "Plan Conflict"
+          },
+          "availability": {
+            "type": "string",
+            "const": "requires_dispatcher_confirmation",
+            "title": "Availability",
+            "default": "requires_dispatcher_confirmation"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "next_stop_name",
+          "next_stop_at",
+          "planned_stops_during_transfer",
+          "plan_conflict",
+          "note"
+        ],
+        "title": "DonorImpact"
       },
       "Explanation": {
         "properties": {
@@ -3427,6 +3526,180 @@
           "received_at"
         ],
         "title": "Telemetry"
+      },
+      "TransferAdvice": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "not_needed",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "calculated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Calculated At"
+          },
+          "context_version": {
+            "type": "integer",
+            "title": "Context Version"
+          },
+          "algorithm_version": {
+            "type": "string",
+            "title": "Algorithm Version",
+            "default": "nearby-plan-scenario-v1"
+          },
+          "target": {
+            "$ref": "#/components/schemas/TransferVehicle"
+          },
+          "donor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TransferVehicle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meeting_stop": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StopTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TransferScenario"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "donor_impact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DonorImpact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Assumptions"
+          },
+          "candidates_considered": {
+            "type": "integer",
+            "title": "Candidates Considered",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "reason",
+          "calculated_at",
+          "context_version",
+          "target"
+        ],
+        "title": "TransferAdvice"
+      },
+      "TransferScenario": {
+        "properties": {
+          "distance_m": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Distance M",
+            "description": "Расстояние по прямой от GPS до остановки подачи"
+          },
+          "relocation_s": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Relocation S",
+            "description": "Сценарий: 1.4 × расстояние, 20 км/ч и 120 с на подготовку; не дорожный ETA"
+          },
+          "donor_arrival_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Donor Arrival At"
+          },
+          "service_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Service At",
+            "description": "Обслуживание не раньше планового времени целевой остановки"
+          },
+          "current_bus_arrival_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Current Bus Arrival At"
+          },
+          "earlier_by_s": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Earlier By S",
+            "description": "Насколько раньше дополнительный автобус может обслужить эту остановку; прогноз задержки исходного ТС не меняется"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "distance_m",
+          "relocation_s",
+          "donor_arrival_at",
+          "service_at",
+          "current_bus_arrival_at",
+          "earlier_by_s"
+        ],
+        "title": "TransferScenario"
+      },
+      "TransferVehicle": {
+        "properties": {
+          "tr_id": {
+            "type": "integer",
+            "title": "Tr Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "route_id": {
+            "type": "string",
+            "title": "Route Id"
+          },
+          "route_name": {
+            "type": "string",
+            "title": "Route Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tr_id",
+          "label",
+          "route_id",
+          "route_name"
+        ],
+        "title": "TransferVehicle"
       },
       "TransformerAnalysis": {
         "properties": {

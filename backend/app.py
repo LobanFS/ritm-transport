@@ -25,6 +25,7 @@ from backend.replay import (CUSTOM_IMPORT_SECONDS, MAX_CUSTOM_IMPORT_BYTES, Repl
                             ReplayControl, ReplayImport, load_replay, prepare_custom_replay)
 from common.contracts import Contract, Telemetry
 from common.state import DashboardState, ForecastTrace, IncidentExport, Metrics
+from common.transfer import TransferAdvice
 
 log = logging.getLogger(__name__)
 
@@ -110,6 +111,21 @@ def create_app(*, start_background: bool = True, enable_ndtp: bool = True, ml_ur
     async def metrics(request: Request):
         """Счётчики процесса; p95 HTTP ML и полного цикла последних 200 вызовов, без ожидания цикла/UI."""
         return request.app.state.engine.state()["metrics"]
+
+    @app.get('/api/v1/vehicles/{tr_id}/transfer-advice', response_model=TransferAdvice, tags=['Диспетчер'])
+    async def transfer_advice(tr_id: int, request: Request, response: Response):
+        """Условный what-if подачи автобуса с другой линии; никаких команд ТС.
+
+        Сравнивает свежие GPS и прогнозы, исключает схожие геометрии планов.
+        Подача оценивается по явному сценарию расстояния и скорости. Загрузка,
+        резерв и разрешение снять автобус с линии подтверждаются диспетчером.
+        """
+        from backend.transfer_advisor import advise_transfer
+        engine = request.app.state.engine
+        if tr_id not in engine.vehicles:
+            raise HTTPException(404, 'Автобус не найден в текущем контексте')
+        response.headers['Cache-Control'] = 'no-store'
+        return advise_transfer(engine.state(), engine.schedule, tr_id)
 
     @app.get("/api/v1/incidents/export", response_model=IncidentExport, tags=["Диспетчер"])
     async def export_incidents(request: Request, response: Response):

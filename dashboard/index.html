@@ -91,12 +91,26 @@
       </article>
 
 
+      <article class="panel fleet-panel" id="vehicles-section" aria-label="Транспорт на карте">
+        <div class="panel-heading"><div class="heading-inline"><h2>Транспорт на линии</h2><span class="count-chip" id="table-count">0</span></div></div>
+        <div class="table-scroll"><table class="fleet-table"><thead><tr><th scope="col">Автобус</th><th scope="col">Прогноз</th></tr></thead><tbody id="vehicle-table-body"></tbody></table></div>
+        <div class="table-empty" id="table-empty">Транспорт пока не поступил в систему.</div>
+      </article>
+
       <aside class="panel vehicle-panel" aria-label="Карточка выбранного автобуса">
         <div class="panel-heading"><h2>Карточка транспорта</h2><span class="small-label">ДЕТАЛИ</span></div>
         <div id="detail-empty" class="detail-empty"><span class="empty-detail-icon" aria-hidden="true">▥</span><h3>Выберите автобус</h3><p>Нажмите на маркер карты или строку в списке, чтобы увидеть прогноз и основания сигнала.</p></div>
         <div id="detail-content" hidden>
           <div class="vehicle-identity"><span class="bus-avatar" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="7" y="5" width="18" height="23" rx="5"/><path d="M8 17h16M11 23h2m6 0h2M12 9h8"/><path d="M10 28v2m12-2v2"/></svg></span><div><h3 id="detail-label">—</h3><div class="vehicle-sub"><span class="route-chip" id="detail-route">—</span><span id="detail-id">—</span></div></div><span class="risk-dot" id="detail-risk-dot"></span></div>
           <div class="forecast-box" id="forecast-box"><div class="forecast-label" id="detail-forecast-label">ПРОГНОЗ НА ЦЕЛЕВОЙ ОСТАНОВКЕ</div><div class="forecast-value" id="detail-delay">—</div></div>
+          <section id="detail-transfer-panel" class="vehicle-transfer" aria-label="Сценарий усиления линии" hidden>
+            <h3>What-if · усилить линию</h3>
+            <p id="transfer-summary" class="transfer-summary"></p>
+            <p id="transfer-detail" class="transfer-detail"></p>
+            <p id="transfer-effect" class="transfer-effect"></p>
+            <p id="transfer-caveat" class="transfer-caveat"></p>
+            <button type="button" class="button" id="transfer-donor-button">Показать автобус</button>
+          </section>
           <dl class="vehicle-facts"><div><dt>Остановка</dt><dd id="detail-target">—</dd></div><div><dt>Плановое прибытие</dt><dd id="detail-planned-arrival">—</dd></div><div><dt>Ожидаемое прибытие</dt><dd id="detail-expected-arrival">—</dd></div><div><dt>Последнее известное отклонение</dt><dd id="detail-current">—</dd></div><div><dt>Скорость</dt><dd id="detail-speed">—</dd></div><div><dt>Вероятность задержки &gt;2 мин</dt><dd id="detail-probability">—</dd></div><div><dt>Последний GPS</dt><dd id="detail-freshness">—</dd></div></dl>
 
           <section id="detail-cause-panel" class="vehicle-cause" aria-label="Причина и наблюдения по выбранному автобусу">
@@ -104,20 +118,18 @@
             <div class="cause-content"><p id="detail-cause">Причина не установлена</p><small class="diagnostic-note" id="detail-cause-status"></small><ul class="reasons-list" id="detail-observations"></ul></div>
             <div class="recommendation"><span aria-hidden="true">↗</span><div><h4>Диспетчеру</h4><p id="detail-recommendation">—</p></div></div>
           </section>
+
         </div>
       </aside>
     </section>
 
     <section class="lower-grid">
-      <article class="panel fleet-panel" id="vehicles-section"><div class="panel-heading"><div class="heading-inline"><h2>Транспорт на линии</h2><span class="count-chip" id="table-count">0</span></div><span class="small-label">СНАЧАЛА РИСКИ</span></div><div class="table-scroll"><table class="fleet-table"><thead><tr><th scope="col">Автобус / маршрут</th><th scope="col">Прогноз</th><th scope="col">Состояние</th><th scope="col">Возраст данных</th><th scope="col"><span class="sr-only">Открыть</span></th></tr></thead><tbody id="vehicle-table-body"></tbody></table></div><div class="table-empty" id="table-empty">Транспорт пока не поступил в систему.</div></article>
-      <div class="operations-side-stack">
       <section class="panel attention-panel current-alerts" aria-label="Актуальные проблемы на всех маршрутах">
-      <div class="panel-heading"><div><div class="heading-inline"><h2>Сейчас требуют внимания</h2><span class="count-chip" id="attention-count">0</span></div><p>Прогноз задержки от 1 минуты</p></div><a href="#vehicles-section" class="attention-all">Все автобусы ↓</a></div>
+      <div class="panel-heading"><div><div class="heading-inline"><h2>Сейчас требуют внимания</h2><span class="count-chip" id="attention-count">0</span></div><p>Прогноз задержки от 1 минуты</p></div><a href="#vehicles-section" class="attention-all">К автобусам ↑</a></div>
       <ul class="attention-list" id="attention-list"></ul>
       <p class="attention-note" id="attention-note">Ожидаем актуальные прогнозы.</p>
     </section>
       <article class="panel timeline-panel" id="incidents-section"><div class="panel-heading"><div><h2>Журнал предупреждений</h2><p><a class="export-link" href="/api/v1/incidents/export" download="incidents.json">Скачать журнал JSON</a></p></div><span class="count-chip" id="timeline-count">0</span></div><ol class="timeline" id="incident-timeline"></ol><div class="timeline-empty" id="timeline-empty"><span aria-hidden="true">✓</span><p>Предупреждений пока нет</p><small>Новые сигналы появятся здесь.</small></div></article>
-      </div>
     </section>
 
 
