@@ -107,7 +107,7 @@ section{padding:18px 24px;border:1px solid #d8e3df;border-radius:12px;background
 
 
 def main():
-    out = ROOT / "docs" / "generated"
+    out = ROOT / "docs" / "reference"
     out.mkdir(parents=True, exist_ok=True)
     from backend.app import app as backend
     from ml_service.app import app as ml
@@ -126,7 +126,7 @@ def main():
         (out / f"{name}.html").write_text(html, encoding="utf-8")
 
     (out / "index.html").write_text(index_html(), encoding="utf-8")
-    (out.parent / "index.html").write_text(index_html("generated/"), encoding="utf-8")
+    (out.parent / "index.html").write_text(index_html("reference/"), encoding="utf-8")
     (out.parent / ".nojekyll").write_text("", encoding="utf-8")
     print(out / "index.html")
 

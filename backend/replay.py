@@ -14,8 +14,10 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
+import time
 from typing import Literal
 from zoneinfo import ZoneInfo
 
@@ -24,11 +26,30 @@ from pydantic import AwareDatetime, Field, field_validator, model_validator
 from common.contracts import Contract, Telemetry, parse_manual_fill
 
 MAX_REPLAY_EVENTS = 500000
+MAX_CUSTOM_IMPORT_BYTES = 80 * 1024 * 1024
+CUSTOM_IMPORT_SECONDS = 30
+
+
+class ReplayImport(Contract):
+    traffic_csv: str = Field(min_length=1)
+    schedule_csv: str = Field(min_length=1, description='План из schedule_plan.csv или schedule.csv; фактические прибытия игнорируются')
+    points_csv: str | None = Field(default=None, min_length=1)
+    timezone: str = 'UTC'
+
+    @field_validator('timezone')
+    @classmethod
+    def known_zone(cls, value):
+        try:
+            ZoneInfo(value)
+        except (KeyError, ValueError) as exc:
+            raise ValueError('Неизвестный часовой пояс IANA') from exc
+        return value
 
 
 class ReplayConfig(Contract):
-    dataset_split: Literal['validate', 'train'] = 'validate'
-    start: AwareDatetime = datetime(2026, 1, 6, 11, 30, tzinfo=timezone.utc)
+    dataset_split: Literal['validate', 'train', 'custom'] = 'validate'
+    start: AwareDatetime | None = Field(default=datetime(2026, 1, 6, 11, 30, tzinfo=timezone.utc),
+                                       description='null: первая доступная телеметрия; для custom это значение по умолчанию')
     duration_minutes: int | None = Field(default=None, ge=1, le=120,
         description='null: до последнего доступного события архива; число: верхняя граница окна для короткой проверки')
     timezone: str = 'UTC'
@@ -40,6 +61,13 @@ class ReplayConfig(Contract):
     warmup_minutes: int = Field(default=5, ge=0, le=120,
                                 description='Сколько доступной истории перед start доставить для прогрева; будущие события остаются в очереди')
 
+    @model_validator(mode='before')
+    @classmethod
+    def custom_defaults(cls, values):
+        if isinstance(values, dict) and values.get('dataset_split') == 'custom':
+            return {'start': None, 'deviation_source': 'gps', **values}
+        return values
+
     @model_validator(mode='after')
     def available_source(self):
         if self.dataset_split == 'train' and self.deviation_source != 'gps':
@@ -48,11 +76,11 @@ class ReplayConfig(Contract):
 
     @property
     def plan_file(self):
-        return 'train/schedule.csv' if self.dataset_split == 'train' else 'validate/schedule_plan.csv'
+        return 'train/schedule.csv' if self.dataset_split == 'train' else self.dataset_split+'/schedule_plan.csv'
 
     @property
     def points_file(self):
-        return 'validate/points.csv' if self.deviation_source == 'csv_snapshot' else None
+        return self.dataset_split+'/points.csv' if self.deviation_source == 'csv_snapshot' else None
 
     @field_validator('timezone')
     @classmethod
@@ -74,7 +102,7 @@ class ReplayConfig(Contract):
 
 
 class ReplayState(Contract):
-    dataset_split: Literal['validate', 'train']
+    dataset_split: Literal['validate', 'train', 'custom']
     plan_file: str
     points_file: str | None
     start: AwareDatetime
@@ -157,12 +185,14 @@ class LoadedReplay:
             note=(f'Исторические {self.config.dataset_split} CSV. '+source_note+
                   ('Train содержит реальную и синтетическую телеметрию; перенос вероятности на этот набор не проверен. '
                    'Фактические прибытия schedule.csv и labels не используются. ' if self.config.dataset_split == 'train' else '')+
+                  ('Пользовательские CSV: происхождение и перенос вероятности не проверены. '
+                   'Импорт нужно повторить после перезапуска backend. ' if self.config.dataset_split == 'custom' else '')+
                   'TTL 300 с — правило приложения. '
                   'Часовой пояс naive CSV — допущение. Линии соединяют плановые остановки, '
                   'не являются дорожной геометрией. MAE здесь не измеряется.'))
 
 
-def load_replay(root: Path, config: ReplayConfig) -> LoadedReplay:
+def load_replay(root: Path, config: ReplayConfig, *, deadline: float | None = None) -> LoadedReplay:
     """Читает выбранный срез, проверяет связи; labels не открывает.
 
     Только фиксированные имена в каталоге из REPLAY_DATA_DIR. В режиме gps
@@ -174,13 +204,24 @@ def load_replay(root: Path, config: ReplayConfig) -> LoadedReplay:
     from common.contracts import StopTarget
 
     zone = ZoneInfo(config.timezone)
+    if config.dataset_split == 'custom' and deadline is None:
+        deadline = time.monotonic()+CUSTOM_IMPORT_SECONDS
+
+    def check_deadline():
+        if deadline is not None and time.monotonic() > deadline:
+            raise ValueError('CSV не удалось обработать за отведённое время')
+
     def dt(value):
         parsed = datetime.fromisoformat(value)
         return parsed.replace(tzinfo=zone) if parsed.tzinfo is None else parsed
 
     def rows(relative_path, columns=None):
+        check_deadline()
         with (root / relative_path).open(encoding='utf-8-sig', newline='') as stream:
-            for row in csv.DictReader(stream):
+            for number, row in enumerate(csv.DictReader(stream), 1):
+                check_deadline()
+                if config.dataset_split == 'custom' and number > MAX_REPLAY_EVENTS:
+                    raise ValueError('Слишком много строк пользовательского CSV')
                 # В train schedule есть будущие факты. За границу чтения строки
                 # проходят только явно разрешённые плановые поля.
                 yield {name: row.get(name, '') for name in columns} if columns else row
@@ -194,9 +235,6 @@ def load_replay(root: Path, config: ReplayConfig) -> LoadedReplay:
         with (root / name).open('rb') as stream:
             sources[name] = hashlib.file_digest(stream, 'sha256').hexdigest()
     requested_ids = set(config.tr_ids) if config.tr_ids is not None else None
-    warmup = config.start - timedelta(minutes=config.warmup_minutes)
-    window_end = (config.start + timedelta(minutes=config.duration_minutes)
-                  if config.duration_minutes is not None else None)
     plan, planned_ids = [], set()
     for row in rows(config.plan_file, ('tr_id', 'time_begin', 'tt_action_item_id',
                                      'geom', 'building_address', 'manual_fill')):
@@ -220,6 +258,15 @@ def load_replay(root: Path, config: ReplayConfig) -> LoadedReplay:
     ids = requested_ids if requested_ids is not None else planned_ids
     if len(ids) > 128:
         raise ValueError('Более 128 ТС; выберите автобусы вручную')
+    if config.start is None:
+        earliest = min((max(dt(row['event_time']), dt(row['receive_time']))
+                        for row in rows(traffic_file) if int(row['tr_id']) in ids), default=None)
+        if earliest is None:
+            raise ValueError('Нет телеметрии для ТС с планом')
+        config = config.model_copy(update={'start': earliest})
+    warmup = config.start - timedelta(minutes=config.warmup_minutes)
+    window_end = (config.start + timedelta(minutes=config.duration_minutes)
+                  if config.duration_minutes is not None else None)
     events, units = [], {}
     telemetry_without_plan = set()
     quality = dict(telemetry=0, snapshots=0, invalid_rows=0, invalid_locations=0,
@@ -242,8 +289,10 @@ def load_replay(root: Path, config: ReplayConfig) -> LoadedReplay:
                 lat=float(row['lat']) if row['lat'] else None, lon=float(row['lon']) if row['lon'] else None,
                 speed_kmh=float(row['speed']) if row['speed'] else None,
                 heading=float(row['heading']) if row['heading'] else None,
-                location_valid=row['location_valid'].lower() == 'true', source='replay', event_id=row['packet_id'])
+                location_valid=row['location_valid'].strip().lower() == 'true', source='replay', event_id=row['packet_id'])
         except ValueError:
+            if config.dataset_split == 'custom':
+                raise
             quality['invalid_rows'] += 1
             continue
         units[tr_id] = unit
@@ -306,7 +355,7 @@ def load_replay(root: Path, config: ReplayConfig) -> LoadedReplay:
     # Хеш исходного файла остаётся в отчёте происхождения. Версия плана train,
     # передаваемая ML, зависит лишь от разрешённых полей, не time_fact_begin.
     plan_version = (hashlib.sha256(json.dumps([s.model_dump(mode='json') for s in plan],
-                    sort_keys=True).encode()).hexdigest() if config.dataset_split == 'train'
+                    sort_keys=True).encode()).hexdigest() if config.dataset_split in ('train', 'custom')
                     else sources[config.plan_file])
     return LoadedReplay(config=config, context=LiveContext(vehicles=vehicles, routes=routes, schedule=plan,
                         arrival_mode='gps' if config.deviation_source == 'gps' else 'external',
@@ -315,3 +364,81 @@ def load_replay(root: Path, config: ReplayConfig) -> LoadedReplay:
                         fleet=dict(planned_vehicles=len(planned_ids), loaded_vehicles=len(vehicles),
                             without_telemetry=missing_ids, telemetry_without_plan=sorted(telemetry_without_plan)),
                         telemetry_times=telemetry_times, position_times=position_times)
+
+
+def prepare_custom_replay(root: Path, payload: ReplayImport) -> LoadedReplay:
+    """Проверить ограниченный пользовательский архив до смены активного контекста."""
+    from common.contracts import StopTarget
+    deadline = time.monotonic()+CUSTOM_IMPORT_SECONDS
+    target = root/'custom'
+    target.mkdir()
+    files = {'traffic.csv': payload.traffic_csv, 'schedule_plan.csv': payload.schedule_csv}
+    if payload.points_csv is not None:
+        files['points.csv'] = payload.points_csv
+    required = {
+        'traffic.csv': {'tr_id', 'unit_id', 'event_time', 'receive_time', 'packet_id', 'lat', 'lon', 'speed', 'heading', 'location_valid'},
+        'schedule_plan.csv': {'tr_id', 'tt_action_item_id', 'time_begin', 'geom'},
+        'points.csv': {'sample_id', 'tr_id', 'T', 'target_stop_id', 'target_time_begin', 'cur_dev_s'},
+    }
+    zone = ZoneInfo(payload.timezone)
+    def dt(value):
+        parsed = datetime.fromisoformat(value)
+        return parsed.replace(tzinfo=zone) if parsed.tzinfo is None else parsed
+    events = 0
+    for name, text in files.items():
+        if '\x00' in text:
+            raise ValueError('CSV содержит нулевой байт')
+        path = target/name
+        path.write_text(text, encoding='utf-8', newline='')
+        with path.open(encoding='utf-8-sig', newline='') as stream:
+            reader = csv.DictReader(stream)
+            fields = reader.fieldnames or []
+            if len(fields) != len(set(fields)) or not required[name].issubset(fields):
+                raise ValueError(f'Неверные заголовки {name}')
+            count = 0
+            for row in reader:
+                if time.monotonic() > deadline:
+                    raise ValueError('CSV не удалось обработать за отведённое время')
+                count += 1
+                if None in row or any(row.get(key) is None for key in required[name]):
+                    raise ValueError(f'Неполная или лишняя колонка в {name}')
+                if name == 'schedule_plan.csv':
+                    if count > 20000:
+                        raise ValueError('Более 20000 строк расписания')
+                else:
+                    events += 1
+                    if events > MAX_REPLAY_EVENTS:
+                        raise ValueError(f'Более {MAX_REPLAY_EVENTS} строк телеметрии и points.csv')
+                if int(row['tr_id']) <= 0:
+                    raise ValueError('tr_id должен быть положительным')
+                if name == 'traffic.csv':
+                    if row['location_valid'].strip().lower() not in ('true', 'false'):
+                        raise ValueError('location_valid должен быть true или false')
+                    Telemetry(tr_id=int(row['tr_id']), unit_id=int(row['unit_id']),
+                        event_time=dt(row['event_time']), received_at=dt(row['receive_time']),
+                        lat=float(row['lat']) if row['lat'] else None,
+                        lon=float(row['lon']) if row['lon'] else None,
+                        speed_kmh=float(row['speed']) if row['speed'] else None,
+                        heading=float(row['heading']) if row['heading'] else None,
+                        event_id=row['packet_id'], location_valid=row['location_valid'].strip().lower() == 'true')
+                elif name == 'schedule_plan.csv':
+                    match = re.fullmatch(r'POINT\s*\(\s*([-+\d.eE]+)\s+([-+\d.eE]+)\s*\)', row['geom'])
+                    if not match:
+                        raise ValueError('Некорректный WKT плановой остановки')
+                    lon, lat = map(float, match.groups())
+                    StopTarget(id=row['tt_action_item_id'], name=row.get('building_address') or row['tt_action_item_id'],
+                        scheduled_at=dt(row['time_begin']), lat=lat, lon=lon,
+                        manual_fill=parse_manual_fill(row.get('manual_fill')))
+                else:
+                    dt(row['T']); dt(row['target_time_begin'])
+                    if not row['sample_id'] or not row['target_stop_id']:
+                        raise ValueError('Пустой идентификатор в points.csv')
+                    if row['cur_dev_s'] and not math.isfinite(float(row['cur_dev_s'])):
+                        raise ValueError('cur_dev_s должен быть конечным числом')
+            if not count:
+                raise ValueError(f'Нет строк в {name}')
+    replay = load_replay(root, ReplayConfig(dataset_split='custom', timezone=payload.timezone), deadline=deadline)
+    if payload.points_csv is not None:
+        # Проверяем соответствие hints плану; основной GPS-прогон их не получает.
+        load_replay(root, replay.config.model_copy(update={'deviation_source': 'csv_snapshot'}), deadline=deadline)
+    return replay

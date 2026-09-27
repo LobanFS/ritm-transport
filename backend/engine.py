@@ -586,6 +586,7 @@ class Engine:
         # Передаём смешанное происхождение явно: перенос калибровки не становится
         # проверенной вероятностью только потому, что поток воспроизводится из CSV.
         replay_domain = ('historical_mixed' if self.replay and self.replay.config.dataset_split == 'train'
+                         else 'unknown' if self.replay and self.replay.config.dataset_split == 'custom'
                          else 'historical_real')
         return PredictionRequest(request_id=f"{tr_id}:{target.id}:{at.isoformat()}", tr_id=tr_id,
             issued_at=at, target=target, current_delay_s=deviation.delay_s if deviation else None, features=features,

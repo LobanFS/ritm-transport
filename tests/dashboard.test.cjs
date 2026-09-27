@@ -7,8 +7,8 @@ const source = fs.readFileSync(path.join(__dirname, '../dashboard/app.js'), 'utf
 const bands = source.slice(source.indexOf('  const RISK ='), source.indexOf('  const $ ='));
 const gate = source.slice(source.indexOf('  const effectiveRisk ='), source.indexOf('  const availabilityLabel ='));
 let disconnected = false;
-const { delayBand, delayColor, effectiveRisk, vehicleColor } = vm.runInNewContext(
-  bands + gate + '\n;({delayBand, delayColor, effectiveRisk, vehicleColor});',
+const { delayBand, delayColor, effectiveRisk, vehicleColor, displayedDelay, RISK } = vm.runInNewContext(
+  bands + gate + '\n;({delayBand, delayColor, effectiveRisk, vehicleColor, displayedDelay, RISK});',
   {apiStale: () => disconnected},
 );
 let checks = 0;
@@ -34,17 +34,20 @@ for (const changed of [
   {...vehicle,prediction:{...vehicle.prediction,risk:'unknown'}},
   {...vehicle,prediction:null},
 ]) {
+  assert.equal(displayedDelay(changed), null, 'never replace missing prediction with zero'); checks++;
   assert.equal(effectiveRisk(changed), 'unknown');
   assert.equal(vehicleColor(changed), delayColor(null)); checks+=2;
 }
+assert.equal(displayedDelay(vehicle), 130); checks++;
+assert.equal(RISK.unknown.label, 'По плану'); checks++;
 disconnected = true;
 assert.equal(effectiveRisk(vehicle), 'unknown'); checks++;
 const probabilitySource = source.slice(source.indexOf('  const probabilityLabel ='), source.indexOf('  const expectedArrival ='));
 const probabilityLabel = vm.runInNewContext(probabilitySource + '\n;probabilityLabel;', {finite: Number.isFinite});
 for (const [value, status, expected] of [
   [.28, 'validated', '28%'], [.28, 'transferred', '≈28% · приближённо'],
-  [.28, 'unavailable', 'не оценена'], [null, 'transferred', 'не оценена'],
-  [NaN, 'validated', 'не оценена'], [1.01, 'validated', 'не оценена'],
+  [.28, 'unavailable', '—'], [null, 'transferred', '—'],
+  [NaN, 'validated', '—'], [1.01, 'validated', '—'],
   [0, 'transferred', '≈0% · приближённо'], [1, 'validated', '100%'],
 ]) {
   assert.equal(probabilityLabel(value,status),expected); checks++;

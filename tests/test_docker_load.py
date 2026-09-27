@@ -94,7 +94,7 @@ def test_source_hashes_executes_only_present_containers(monkeypatch, with_genera
     assert hashes['dashboard'] == {'dashboard/index.html': 'abc'}
 
 
-def test_dashboard_documentation_hashes_map_to_generated_source_directory(monkeypatch):
+def test_dashboard_documentation_hashes_map_to_reference_source_directory(monkeypatch):
     docker = Docker(None, 'test-project')
     inventory = {service: {'id': f'{service}-id'} for service in ['backend', 'ml', 'dashboard']}
     def run(*command):
@@ -106,8 +106,8 @@ def test_dashboard_documentation_hashes_map_to_generated_source_directory(monkey
     monkeypatch.setattr(docker, 'run', run)
     assert docker.source_hashes(inventory)['dashboard'] == {
         'dashboard/index.html': 'htmlhash',
-        'docs/generated/backend-openapi.json': 'apihash',
-        'docs/generated/pydoc/backend.app.html': 'nestedhash',
+        'docs/reference/backend-openapi.json': 'apihash',
+        'docs/reference/pydoc/backend.app.html': 'nestedhash',
     }
 
 

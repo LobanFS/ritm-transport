@@ -125,7 +125,7 @@ class Docker:
         for line in files.splitlines():
             digest, path = line.split(maxsplit=1)
             relative = path.removeprefix('/usr/share/nginx/html/')
-            source = ('docs/generated/' + relative.removeprefix('documentation/')
+            source = ('docs/reference/' + relative.removeprefix('documentation/')
                       if relative.startswith('documentation/') else f'dashboard/{relative}')
             result['dashboard'][source] = digest
         return result

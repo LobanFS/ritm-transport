@@ -95,7 +95,7 @@ def main():
     missing = [str(p.relative_to(ROOT)) for p in files if not p.is_file()]
     if missing:
         raise SystemExit('Отсутствуют файлы: '+', '.join(missing))
-    if not (ROOT/'docs/generated/index.html').is_file():
+    if not (ROOT/'docs/reference/index.html').is_file():
         raise SystemExit('Сначала сгенерируйте документацию: python tools/export_docs.py')
     manifest = dict(created_at=datetime.now(timezone.utc).isoformat(),
                     files={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest()

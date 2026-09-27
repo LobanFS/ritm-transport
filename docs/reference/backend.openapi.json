@@ -177,7 +177,7 @@
           "Исторический replay"
         ],
         "summary": "Replay Load",
-        "description": "Загрузить validate или train из REPLAY_DATA_DIR; train только в режиме gps.\n\nИз train/schedule.csv используются только плановые поля. labels и\nфактические прибытия не становятся входами детектора или модели.\n\ntr_ids=null выбирает все ТС с планом и сообщениями в срезе с прогревом.\nЯвный список — ручной выбор до 128 ТС. Счётчики и будущие времена\nв replay.streams служат только диагностикой очереди проигрывателя.\n\nduration_minutes=null (по умолчанию) читает до последней доставки\nвыбранного архива: max(event_time, receive_time) для GPS, T для CSV.\nЯвное число ограничивает окно сверху. Пустой хвост не проигрывается.\nПо умолчанию начинает с паузы. Загрузка очищает текущий контекст только\nпосле успешной проверки CSV. Пути файлов через API не задаются.",
+        "description": "Загрузить validate/train из REPLAY_DATA_DIR или ранее импортированный custom.\n\nИз train/schedule.csv используются только плановые поля. labels и\nфактические прибытия не становятся входами детектора или модели.\n\ntr_ids=null выбирает все ТС с планом и сообщениями в срезе с прогревом.\nЯвный список — ручной выбор до 128 ТС. Счётчики и будущие времена\nв replay.streams служат только диагностикой очереди проигрывателя.\n\nduration_minutes=null (по умолчанию) читает до последней доставки\nвыбранного архива: max(event_time, receive_time) для GPS, T для CSV.\nЯвное число ограничивает окно сверху. Пустой хвост не проигрывается.\nПо умолчанию начинает с паузы. Загрузка очищает текущий контекст только\nпосле успешной проверки CSV. Пути файлов через API не задаются.",
         "operationId": "replay_load_api_v1_replay_load_post",
         "requestBody": {
           "content": {
@@ -205,6 +205,92 @@
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/replay/custom": {
+      "get": {
+        "tags": [
+          "Исторический replay"
+        ],
+        "summary": "Custom Status",
+        "description": "Доступность пользовательского архива; серверные пути не раскрываются.",
+        "operationId": "custom_status_api_v1_replay_custom_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/replay/import": {
+      "post": {
+        "tags": [
+          "Исторический replay"
+        ],
+        "summary": "Replay Import",
+        "description": "Проверить CSV и активировать custom на паузе, с GPS и началом по данным.\n\nВесь JSON ограничен 80 MiB; приём и обработка — по 30 секунд.\nМаксимум 500000 строк traffic+points, 20000 строк плана, 128 ТС.\nИмена файлов фиксированы. Bundled train/validate не изменяются.\nОшибка оставляет прежний контекст и прежний custom; импорт удаляется\nпосле перезапуска backend. points необязателен и включается только\nотдельным /replay/load с deviation_source=csv_snapshot.",
+        "operationId": "replay_import_api_v1_replay_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "traffic_csv": {
+                    "type": "string",
+                    "minLength": 1,
+                    "title": "Traffic Csv"
+                  },
+                  "schedule_csv": {
+                    "type": "string",
+                    "minLength": 1,
+                    "title": "Schedule Csv",
+                    "description": "План из schedule_plan.csv или schedule.csv; фактические прибытия игнорируются"
+                  },
+                  "points_csv": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Points Csv"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "title": "Timezone",
+                    "default": "UTC"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "traffic_csv",
+                  "schedule_csv"
+                ],
+                "title": "ReplayImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -2328,15 +2414,24 @@
             "type": "string",
             "enum": [
               "validate",
-              "train"
+              "train",
+              "custom"
             ],
             "title": "Dataset Split",
             "default": "validate"
           },
           "start": {
-            "type": "string",
-            "format": "date-time",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Start",
+            "description": "null: первая доступная телеметрия; для custom это значение по умолчанию",
             "default": "2026-01-06T11:30:00Z"
           },
           "duration_minutes": {
@@ -2448,7 +2543,8 @@
             "type": "string",
             "enum": [
               "validate",
-              "train"
+              "train",
+              "custom"
             ],
             "title": "Dataset Split"
           },

@@ -526,3 +526,196 @@ def test_load_replay_cli_sends_null_by_default_and_preserves_explicit_minutes(mo
     cli.main()
     assert requests[0]['duration_minutes'] == expected
     assert requests[0]['tr_ids'] is None and requests[0]['paused'] is True
+
+
+@pytest.fixture
+def custom_payload(dataset):
+    def read(name):
+        return (dataset/'validate'/name).read_text().replace('2026-01-06', '2031-05-03')
+    return {'traffic_csv': read('traffic.csv'), 'schedule_csv': read('schedule_plan.csv'),
+            'timezone': 'UTC'}
+
+
+def test_custom_import_arbitrary_date_starts_at_first_delivery_without_future_history(custom_payload, monkeypatch):
+    monkeypatch.delenv('REPLAY_DATA_DIR', raising=False)
+    app = create_app(start_background=False, enable_ndtp=False)
+    with TestClient(app) as client:
+        assert client.get('/api/v1/replay/custom').json()['available'] is False
+        result = client.post('/api/v1/replay/import', json=custom_payload)
+        assert result.status_code == 200, result.text
+        body = result.json()
+        assert body['custom'] == {'available': True, 'has_points': False, 'timezone': 'UTC',
+            'start': '2031-05-03T11:29:59+00:00', 'end': '2031-05-03T11:30:20+00:00', 'expires_on_restart': True}
+        view = body['replay']
+        assert view['dataset_split'] == 'custom' and view['deviation_source'] == 'gps'
+        assert view['start'] == '2031-05-03T11:29:59Z' and view['end'] == '2031-05-03T11:30:20Z'
+        assert not view['running'] and view['duration_minutes'] is None
+        assert view['delivered'] == 1 and view['total'] == 3 and view['points_file'] is None
+        engine = app.state.engine
+        assert len(engine.history[1]) == 1 and not any(engine.hints.values())
+        assert all(max(point.event_time, point.received_at) <= engine.clock for point in engine.history[1])
+        assert engine.request_for(1, engine.clock).telemetry_domain == 'unknown'
+        assert client.post('/api/v1/replay/control', json={'action': 'resume'}).status_code == 200
+        assert client.post('/api/v1/replay/control', json={'action': 'pause'}).status_code == 200
+        state = client.get('/api/v1/state').json()
+        assert state['context']['source'] == 'custom/schedule_plan.csv'
+        storage = app.state.custom_storage
+    assert not storage.exists()
+    with TestClient(app) as client:
+        assert client.get('/api/v1/replay/custom').json()['available'] is False
+        assert client.post('/api/v1/replay/load', json={'dataset_split': 'custom'}).status_code == 409
+
+
+def test_custom_location_valid_accepts_whitespace_without_losing_coordinates(custom_payload):
+    custom_payload['traffic_csv'] = custom_payload['traffic_csv'].replace('True', ' true ')
+    app = create_app(start_background=False, enable_ndtp=False)
+    with TestClient(app) as client:
+        response = client.post('/api/v1/replay/import', json=custom_payload)
+        assert response.status_code == 200, response.text
+        assert response.json()['replay']['quality']['invalid_locations'] == 0
+        point, = app.state.engine.history[1]
+        assert point.location_valid is True
+        vehicle, = client.get('/api/v1/state').json()['vehicles']
+        assert vehicle['lat'] == 55.75 and vehicle['lon'] == 37.60
+
+
+def test_custom_reload_keeps_bundled_csv_untouched_and_inherits_timezone(custom_payload, dataset, monkeypatch):
+    monkeypatch.setenv('REPLAY_DATA_DIR', str(dataset))
+    hashes = {path: path.read_bytes() for path in (dataset/'validate').iterdir()}
+    custom_payload['timezone'] = 'Europe/Moscow'
+    with TestClient(create_app(start_background=False, enable_ndtp=False)) as client:
+        response = client.post('/api/v1/replay/import', json=custom_payload)
+        assert response.status_code == 200
+        assert response.json()['replay']['start'] == '2031-05-03T11:29:59+03:00'
+        assert client.post('/api/v1/replay/load', json={'deviation_source': 'gps'}).status_code == 200
+        assert client.get('/api/v1/replay/custom').json()['available']
+        response = client.post('/api/v1/replay/load', json={'dataset_split': 'custom'})
+        assert response.status_code == 200
+        assert response.json()['replay']['timezone'] == 'Europe/Moscow'
+        assert response.json()['replay']['start'] == '2031-05-03T11:29:59+03:00'
+        response = client.post('/api/v1/replay/load', json={'dataset_split': 'custom',
+            'start': '2031-05-03T11:30:10+03:00', 'warmup_minutes': 5})
+        assert response.status_code == 200 and response.json()['replay']['delivered'] == 2
+        assert response.json()['replay']['start'] == '2031-05-03T11:30:10+03:00'
+        assert client.post('/api/v1/replay/load', json={'dataset_split': 'custom',
+            'deviation_source': 'csv_snapshot'}).status_code == 422
+    assert all(path.read_bytes() == before for path, before in hashes.items())
+
+
+def test_custom_points_are_optional_and_only_used_on_explicit_source_selection(custom_payload, dataset):
+    custom_payload['points_csv'] = (dataset/'validate/points.csv').read_text().replace('2026-01-06', '2031-05-03')
+    app = create_app(start_background=False, enable_ndtp=False)
+    with TestClient(app) as client:
+        result = client.post('/api/v1/replay/import', json=custom_payload)
+        assert result.status_code == 200 and result.json()['custom']['has_points']
+        assert result.json()['replay']['quality']['snapshots'] == 0
+        result = client.post('/api/v1/replay/load', json={'dataset_split': 'custom',
+            'deviation_source': 'csv_snapshot', 'start': '2031-05-03T11:30:00Z'})
+        assert result.status_code == 200
+        assert result.json()['replay']['points_file'] == 'custom/points.csv'
+        assert app.state.engine.deviation_at(1, app.state.engine.clock).delay_s == 180
+        assert len(app.state.engine.hints[1]) == 1  # future points stay queued
+
+
+@pytest.mark.parametrize('problem', ['headers', 'date', 'latitude', 'wkt', 'points', 'json_extra', 'nonsense_boolean'])
+def test_invalid_custom_import_preserves_active_context_and_previous_archive(custom_payload, problem):
+    app = create_app(start_background=False, enable_ndtp=False)
+    with TestClient(app) as client:
+        assert client.post('/api/v1/replay/import', json=custom_payload).status_code == 200
+        old_root = app.state.custom_dataset['root']
+        state = client.get('/api/v1/state').json()
+        changed = dict(custom_payload)
+        if problem == 'headers': changed['traffic_csv'] = changed['traffic_csv'].replace('event_time', 'bad_header', 1)
+        if problem == 'date': changed['traffic_csv'] = changed['traffic_csv'].replace('2031-05-03 11:29:59', 'invalid-date', 1)
+        if problem == 'latitude': changed['traffic_csv'] = changed['traffic_csv'].replace('55.75', '1000', 1)
+        if problem == 'wkt': changed['schedule_csv'] = changed['schedule_csv'].replace('POINT', 'NOTPOINT', 1)
+        if problem == 'points': changed['points_csv'] = 'invalid header\nvalue\n'
+        if problem == 'json_extra': changed['path'] = '/etc/passwd'
+        if problem == 'nonsense_boolean': changed['traffic_csv'] = changed['traffic_csv'].replace('True', 'whatever', 1)
+        result = client.post('/api/v1/replay/import', json=changed)
+        assert result.status_code == 422, result.text
+        after = client.get('/api/v1/state').json()
+        assert after['context'] == state['context'] and after['replay'] == state['replay']
+        assert app.state.custom_dataset['root'] == old_root
+        assert list(app.state.custom_storage.iterdir()) == [old_root]
+        assert client.post('/api/v1/replay/load', json={'dataset_split': 'custom'}).status_code == 200
+
+
+def test_custom_import_body_limit_checks_header_and_stream_without_changing_context(custom_payload, monkeypatch):
+    import importlib
+    module = importlib.import_module('backend.app')
+    app = create_app(start_background=False, enable_ndtp=False)
+    with TestClient(app) as client:
+        assert client.post('/api/v1/replay/import', json=custom_payload).status_code == 200
+        state = client.get('/api/v1/state').json()
+        monkeypatch.setattr(module, 'MAX_CUSTOM_IMPORT_BYTES', 100)
+        assert client.post('/api/v1/replay/import', json=custom_payload).status_code == 413
+        def chunks():
+            yield b' ' * 60
+            yield b' ' * 60
+        assert client.post('/api/v1/replay/import', content=chunks(), headers={'content-type': 'application/json'}).status_code == 413
+        assert client.get('/api/v1/state').json()['replay'] == state['replay']
+
+
+@pytest.mark.parametrize('limit', ['rows', 'time'])
+def test_custom_import_resource_limit_failure_is_atomic(custom_payload, monkeypatch, limit):
+    from backend import replay as module
+    app = create_app(start_background=False, enable_ndtp=False)
+    with TestClient(app) as client:
+        assert client.post('/api/v1/replay/import', json=custom_payload).status_code == 200
+        state = client.get('/api/v1/state').json()
+        if limit == 'rows': monkeypatch.setattr(module, 'MAX_REPLAY_EVENTS', 2)
+        else: monkeypatch.setattr(module, 'CUSTOM_IMPORT_SECONDS', -1)
+        assert client.post('/api/v1/replay/import', json=custom_payload).status_code == 422
+        assert client.get('/api/v1/state').json()['replay'] == state['replay']
+
+
+def test_custom_schedule_future_fact_changes_do_not_change_model_plan(custom_payload):
+    rows = custom_payload['schedule_csv'].splitlines()
+    custom_payload['schedule_csv'] = '\n'.join([rows[0]+',time_fact_begin', *[row+',future-ignored' for row in rows[1:]]])+'\n'
+    app = create_app(start_background=False, enable_ndtp=False)
+    with TestClient(app) as client:
+        assert client.post('/api/v1/replay/import', json=custom_payload).status_code == 200
+        engine = app.state.engine
+        before = engine.request_for(1, engine.clock).model_dump(mode='json')
+        old_root = app.state.custom_dataset['root']
+        old_hash = engine.replay.sources['custom/schedule_plan.csv']
+        custom_payload['schedule_csv'] = custom_payload['schedule_csv'].replace('future-ignored', '2099-12-31 23:59:59')
+        assert client.post('/api/v1/replay/import', json=custom_payload).status_code == 200
+        assert engine.request_for(1, engine.clock).model_dump(mode='json') == before
+        assert engine.replay.sources['custom/schedule_plan.csv'] != old_hash
+        assert not old_root.exists()
+
+
+def test_parallel_import_load_and_context_change_do_not_publish_staged_archive(custom_payload, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    import importlib
+    import threading
+    module = importlib.import_module('backend.app')
+    app = create_app(start_background=False, enable_ndtp=False)
+    with TestClient(app) as client:
+        assert client.post('/api/v1/replay/import', json=custom_payload).status_code == 200
+        original_custom = dict(app.state.custom_dataset)
+        initial_state = client.get('/api/v1/state').json()
+        entered, finish = threading.Event(), threading.Event()
+        original_prepare = module.prepare_custom_replay
+        def slow_prepare(*args):
+            entered.set()
+            assert finish.wait(timeout=5)
+            return original_prepare(*args)
+        monkeypatch.setattr(module, 'prepare_custom_replay', slow_prepare)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(client.post, '/api/v1/replay/import', json=custom_payload)
+            try:
+                assert entered.wait(timeout=5)
+                assert client.get('/api/v1/state').json()['replay'] == initial_state['replay']
+                assert client.post('/api/v1/replay/import', json=custom_payload).status_code == 409
+                assert client.post('/api/v1/replay/load', json={'dataset_split': 'custom'}).status_code == 409
+                assert client.post('/api/v1/mode', json={'mode': 'live'}).status_code == 200
+            finally:
+                finish.set()
+            assert future.result(timeout=5).status_code == 409
+        assert client.get('/api/v1/state').json()['mode'] == 'live'
+        assert app.state.custom_dataset == original_custom
+        assert list(app.state.custom_storage.iterdir()) == [original_custom['root']]
+        assert client.post('/api/v1/replay/load', json={'dataset_split': 'custom'}).status_code == 200

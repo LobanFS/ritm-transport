@@ -1,11 +1,19 @@
 {
-  "checked_at": "2026-09-27T16:01:55.457739+00:00",
+  "checked_at": "2026-09-27T16:32:45.532984+00:00",
   "python_tests": {
-    "passed": 665,
+    "passed": 681,
     "failed": 0
   },
   "dashboard_checks": {
-    "passed": 37
+    "passed": 43,
+    "browser": {
+      "map_controls_on_left": true,
+      "neutral_route_and_stops": true,
+      "on_schedule_labels": true,
+      "causes_include_model_factors": true,
+      "custom_import_and_playback": true,
+      "invalid_csv_preserves_archive": true
+    }
   },
   "docker_start": {
     "train": true,
@@ -23,7 +31,7 @@
   },
   "live_plan_csv_conversion": true,
   "performance": {
-    "measured_at": "2026-09-27T15:49:29.567803+00:00",
+    "measured_at": "2026-09-27T16:29:29.735892+00:00",
     "passed": true,
     "environment": {
       "host": "Apple Silicon, macOS; Colima",
@@ -47,16 +55,16 @@
       "sent": 960,
       "received": 960,
       "nominal_messages_per_s": 40.0,
-      "wall_s": 24.556,
-      "e2e_p50_ms": 975.25,
-      "e2e_p95_ms": 1567.42,
-      "e2e_max_ms": 1596.39,
+      "wall_s": 23.7,
+      "e2e_p50_ms": 1113.63,
+      "e2e_p95_ms": 1617.4,
+      "e2e_max_ms": 1677.47,
       "p95_budget_ms": 2000,
       "p95_budget_met": true,
       "peak_pending_rounds": 2,
       "pending_at_end": 0,
-      "http_ml_p95_ms": 286.72,
-      "pipeline_p95_ms": 301.85
+      "http_ml_p95_ms": 332.84,
+      "pipeline_p95_ms": 348.17
     },
     "checks": [
       {
@@ -70,7 +78,7 @@
         "passed": true,
         "sent": 960,
         "received": 960,
-        "e2e_p95_ms": 1567.42,
+        "e2e_p95_ms": 1617.4,
         "pending_at_end": 0
       },
       {
@@ -81,17 +89,17 @@
       {
         "name": "Повторный NDTP handshake",
         "passed": true,
-        "recovery_s": 1.523
+        "recovery_s": 1.591
       },
       {
         "name": "Остановлен настоящий ML-контейнер",
         "passed": true,
-        "fallback_s": 0.605
+        "fallback_s": 0.486
       },
       {
         "name": "Тот же ML-контейнер запущен снова",
         "passed": true,
-        "recovery_s": 2.37
+        "recovery_s": 2.569
       }
     ],
     "limitations": [
@@ -102,7 +110,7 @@
       "Pending — неподтверждённые раунды, не размер очереди ядра TCP; раунды могут объединяться одним прогнозом."
     ],
     "tool": "tools/check_docker_load.py",
-    "tool_sha256": "ab04f454fe07a716d01360c1676d8fa15c1648e6b5f949abe4ffe175ee208954"
+    "tool_sha256": "81edcebcd393e0e1b49342f7e4f5a99a9a9bb6cecd782d322b3232e72738593e"
   },
   "bundled_dataset": {
     "directory": "dataset/",
@@ -110,5 +118,16 @@
     "default_split": "train",
     "checksums": "dataset/manifest.json",
     "default_start_without_data_dir": true
+  },
+  "custom_history": {
+    "via_browser": true,
+    "required_files": [
+      "traffic.csv",
+      "schedule.csv or schedule_plan.csv"
+    ],
+    "points_optional": true,
+    "live_mode_import": true,
+    "invalid_input_preserves_current_session": true,
+    "expires_on_backend_restart": true
   }
 }

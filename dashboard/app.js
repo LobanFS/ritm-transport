@@ -8,8 +8,8 @@
     red: { label: "Опоздание больше 2,5 мин", short: "Опоздание", color: "#d74e4b", rank: 0 },
     amber: { label: "Опоздание от 1 до 2,5 мин", short: "Наблюдение", color: "#e4aa24", rank: 1 },
     blue: { label: "Опережение больше 30 с", short: "Опережение", color: "#397cc6", rank: 2 },
-    green: { label: "По графику · опоздание меньше минуты", short: "По графику", color: "#328a6d", rank: 3 },
-    unknown: { label: "Нет оценки", short: "Нет оценки", color: "#328a6d", rank: 4 },
+    green: { label: "По плану", short: "По плану", color: "#328a6d", rank: 3 },
+    unknown: { label: "По плану", short: "По плану", color: "#328a6d", rank: 3 },
   };
   // Presentation bands are independent of P(delay > 120s) and the model contract.
   function delayBand(seconds) {
@@ -52,6 +52,9 @@
   let map = null;
   let tileLayer = null;
   let targetMarker = null;
+  let routeLayer = null;
+  let routeGeometrySignature = "";
+  let customArchive = { available: false, has_points: false };
   let mapContext = null;
   let directionContext = null;
   let directionClock = null;
@@ -83,7 +86,7 @@
     return new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Moscow", hour: "2-digit", minute: "2-digit", ...(seconds ? { second: "2-digit" } : {}) }).format(ms);
   };
   const duration = (value, compact = false) => {
-    if (!finite(value) || value < 0) return "Нет данных";
+    if (!finite(value) || value < 0) return "—";
     const total = Math.round(value);
     if (total < 60) return `${total} с`;
     const minutes = Math.floor(total / 60);
@@ -91,14 +94,14 @@
     return `${Math.floor(minutes / 60)} ч ${minutes % 60} мин`;
   };
   const delay = (value, compact = false) => {
-    if (!finite(value)) return "Не оценена";
+    if (!finite(value)) return "По расписанию";
     const total = Math.round(Math.abs(value));
     const sign = value > 0 ? "+" : value < 0 ? "−" : "";
     if (compact) return `${sign}${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
     return sign + duration(total);
   };
   const probabilityLabel = (value, status) => finite(value) && value >= 0 && value <= 1 && status !== "unavailable"
-    ? status === "transferred" ? `≈${Math.round(value * 100)}% · приближённо` : `${Math.round(value * 100)}%` : "не оценена";
+    ? status === "transferred" ? `≈${Math.round(value * 100)}% · приближённо` : `${Math.round(value * 100)}%` : "—";
   const expectedArrival = (plannedAt, delaySeconds) => {
     const planned = timestamp(plannedAt);
     if (planned === null || !finite(delaySeconds)) return null;
@@ -113,16 +116,8 @@
     return delayBand(vehicle.prediction?.predicted_delay_s);
   };
   const vehicleColor = vehicle => delayColor(vehicle.prediction?.predicted_delay_s, effectiveRisk(vehicle));
-  const displayedDelay = vehicle => fullUI || effectiveRisk(vehicle) !== "unknown" ? vehicle.prediction?.predicted_delay_s : null;
-  const availabilityLabel = (vehicle) => {
-    if (apiStale()) return "Нет связи с API";
-    const labels = { source_unavailable: "Нет связи с источником", no_target: "Нет цели в 10–15 мин",
-      telemetry_missing: "Нет GPS", telemetry_stale: "GPS устарел",
-      deviation_expired: "Отклонение устарело", deviation_missing: "Нет текущего отклонения",
-      target_reached: "Цель уже посещена", prediction_pending: "Ожидается расчёт",
-      model_input_unavailable: "Недостаточно входов" };
-    return labels[vehicle.prediction_availability?.code] || "Нет оценки";
-  };
+  const displayedDelay = vehicle => effectiveRisk(vehicle) !== "unknown" ? vehicle.prediction?.predicted_delay_s : null;
+  const availabilityLabel = () => "По плану";
   const routeOf = (vehicle) => list(snapshot?.routes).find((route) => idOf(route.route_id) === idOf(vehicle.route_id));
   const vehicleName = (vehicle) => vehicle?.label || `Автобус ${vehicle?.tr_id ?? "—"}`;
   const routeName = (vehicle) => routeOf(vehicle)?.name || vehicle.route_id || "Без маршрута";
@@ -144,6 +139,9 @@
     ["replay-load", "replay-split", "replay-source", "replay-start", "replay-warmup", "replay-selection", "replay-vehicles", "replay-timezone"].forEach(id => { $(id).disabled = busy || !connected; });
     $("replay-vehicles").disabled = busy || !connected || $("replay-selection").value !== "manual";
     $("replay-vehicles").required = $("replay-selection").value === "manual";
+    ["custom-traffic", "custom-schedule", "custom-points", "custom-timezone", "custom-import"].forEach(id => {
+      if ($(id)) $(id).disabled = busy || !connected;
+    });
   };
 
   function filteredVehicles() {
@@ -153,10 +151,11 @@
     return list(snapshot?.vehicles).filter((vehicle) => {
       if (route !== "all" && idOf(vehicle.route_id) !== route) return false;
       if (risk === "stale" && vehicle.status === "fresh" && !apiStale()) return false;
-      if (risk !== "all" && risk !== "stale" && effectiveRisk(vehicle) !== risk) return false;
+      const band = effectiveRisk(vehicle);
+      if (risk !== "all" && risk !== "stale" && (band === "unknown" ? "green" : band) !== risk) return false;
       const searchable = [vehicle.label, vehicle.tr_id, vehicle.unit_id, vehicle.route_id, routeName(vehicle)].join(" ").toLocaleLowerCase("ru-RU");
       return !query || searchable.includes(query);
-    }).sort((a, b) => RISK[effectiveRisk(a)].rank - RISK[effectiveRisk(b)].rank || (b.prediction?.predicted_delay_s || 0) - (a.prediction?.predicted_delay_s || 0) || idOf(a.tr_id).localeCompare(idOf(b.tr_id)));
+    }).sort((a, b) => RISK[effectiveRisk(a)].rank - RISK[effectiveRisk(b)].rank || (displayedDelay(b) || 0) - (displayedDelay(a) || 0) || idOf(a.tr_id).localeCompare(idOf(b.tr_id)));
   }
 
   function renderRouteOptions() {
@@ -289,8 +288,39 @@
     return current;
   }
 
+  function renderRouteGeometry() {
+    if (!map) return;
+    const filter = $("route-filter").value;
+    const routeId = filter === "all" ? idOf(chosenVehicle()?.route_id) : filter;
+    const routes = list(snapshot?.routes).filter(route => idOf(route.route_id) === routeId);
+    const signature = JSON.stringify([snapshot?.context?.version, routes]);
+    if (signature === routeGeometrySignature) return;
+    routeGeometrySignature = signature;
+    if (!routeLayer) routeLayer = L.layerGroup().addTo(map);
+    routeLayer.clearLayers();
+    const seenStops = new Set();
+    routes.forEach(route => {
+      const points = list(route.path).map(point => Array.isArray(point) ? latLng(point[0], point[1]) : null).filter(Boolean);
+      if (points.length > 1) L.polyline(points, {
+        color: "#6f8580", weight: 2, opacity: .7, interactive: false,
+      }).addTo(routeLayer);
+      list(route.stops).forEach(stop => {
+        const position = latLng(stop.lon, stop.lat);
+        if (!position) return;
+        const key = `${stop.lon},${stop.lat}`;
+        if (seenStops.has(key)) return;
+        seenStops.add(key);
+        L.circleMarker(position, {radius: 3.5, color: "#607973", weight: 1.5,
+          fillColor: "#fff", fillOpacity: 1})
+          .bindTooltip(node("span", "", stop.name || "Остановка"))
+          .addTo(routeLayer);
+      });
+    });
+  }
+
   function renderMap(vehicles) {
     initMap();
+    renderRouteGeometry();
     const clock = timestamp(snapshot?.clock_time);
     const contextKey = JSON.stringify([snapshot?.mode, snapshot?.context?.version,
       snapshot?.context?.loaded_at, snapshot?.generator?.session_id,
@@ -336,18 +366,15 @@
       }
       marker.layer.setLatLng(position);
       const risk = effectiveRisk(vehicle);
-      const directionLabel = hasDirection ? `направление ${Math.round(direction)}°, ${marker.directionState.source}` : "направление неизвестно";
-      const availability = risk === "unknown" ? `, ${availabilityLabel(vehicle)}` : "";
-      const accessibleLabel = `${vehicleName(vehicle)}, ${RISK[risk].label}${availability}, прогноз ${delay(displayedDelay(vehicle))}, ${directionLabel}`;
+      const directionLabel = hasDirection ? ` · курс ${Math.round(direction)}°` : "";
+      const accessibleLabel = `${vehicleName(vehicle)}, ${RISK[risk].label}, ${delay(displayedDelay(vehicle))}${directionLabel}`;
       const element = marker.layer.getElement();
       element.classList.toggle("is-selected", key === selectedId);
-      element.classList.toggle("is-stale", vehicle.status !== "fresh" || apiStale());
       element.setAttribute("aria-pressed", String(key === selectedId));
       element.setAttribute("aria-label", accessibleLabel);
       element.title = accessibleLabel;
       marker.body.style.setProperty("--pin-color", vehicleColor(vehicle));
       marker.body.style.setProperty("--pin-text", risk === "amber" ? "#4b3309" : "#fff");
-      element.classList.toggle("is-unassessed", risk === "unknown");
       marker.code.textContent = String(vehicle.tr_id);
       const label = vehicleName(vehicle).replace(/^Автобус\s*/i, "").slice(0, 18);
       marker.label.textContent = label === String(vehicle.tr_id) ? "" : label;
@@ -393,18 +420,16 @@
     text("kpi-total", snapshot ? integer(vehicles.length) : "—");
     text("kpi-red", snapshot ? vehicles.filter((v) => effectiveRisk(v) === "red").length : "—");
     text("kpi-amber", snapshot ? vehicles.filter((v) => effectiveRisk(v) === "amber").length : "—");
-    const stale = vehicles.filter((v) => v.status !== "fresh" || apiStale()).length;
-    const unknown = vehicles.filter((v) => effectiveRisk(v) === "unknown").length;
-    text("kpi-stale", snapshot ? unknown : "—");
-    text("kpi-total-note", snapshot ? `${list(snapshot.routes).length} ${snapshot.mode === "replay" ? "планов ТС" : "маршрутов"} · ${vehicles.filter((v) => v.status === "fresh" && !apiStale()).length} со свежими данными` : "Ожидаем телеметрию");
-    text("kpi-stale-note", snapshot ? `${stale} ТС без свежего GPS` : "Ожидаем данные");
+    const onPlan = vehicles.filter(v => ["green", "unknown"].includes(effectiveRisk(v))).length;
+    text("kpi-stale", snapshot ? onPlan : "—");
+    text("kpi-total-note", snapshot ? `${list(snapshot.routes).length} ${snapshot.mode === "replay" ? "планов ТС" : "маршрутов"}` : "Ожидаем телеметрию");
+    text("kpi-stale-note", "Плановое движение");
     text("nav-event-count", list(snapshot?.incidents).length);
   }
 
   function renderAttention() {
     // This queue is built only from current vehicle predictions, never incident history.
     const vehicles = list(snapshot?.vehicles);
-    const unknown = vehicles.filter((vehicle) => effectiveRisk(vehicle) === "unknown").length;
     const problems = vehicles.filter((vehicle) => ["red", "amber"].includes(effectiveRisk(vehicle)))
       .sort((a, b) => RISK[effectiveRisk(a)].rank - RISK[effectiveRisk(b)].rank
         || (b.prediction?.predicted_delay_s || 0) - (a.prediction?.predicted_delay_s || 0)
@@ -412,7 +437,7 @@
     text("attention-count", problems.length);
     text("attention-note", apiStale() ? "Нет актуального состояния: ожидаем связь с API."
       : !vehicles.length ? "Ожидаем автобусы от выбранного источника."
-      : `${unknown ? `${unknown} ТС без актуальной оценки риска. ` : ""}${problems.length ? "Сначала красные сигналы; нажмите строку, чтобы открыть автобус." : "Повышенных прогнозов среди ТС с актуальной оценкой сейчас нет."}`);
+      : problems.length ? "Нажмите строку, чтобы открыть автобус." : "Предупреждений о задержках сейчас нет.");
     const rows = problems.map((vehicle) => ({
       id: idOf(vehicle.tr_id), label: vehicleName(vehicle), route: routeCode(vehicle), risk: effectiveRisk(vehicle),
       section: vehicle.section || "Плановый участок не указан", target: vehicle.prediction?.target || vehicle.target, predicted: vehicle.prediction?.predicted_delay_s,
@@ -436,8 +461,11 @@
       section.append(node("strong", "", row.target?.name || "Цель не определена"), node("span", "", row.section));
       if (row.target) section.append(node("span", "attention-arrival", `План ${time(row.target.scheduled_at)} → ожидаем ${time(expectedArrival(row.target.scheduled_at, row.predicted))} МСК`));
       const forecast = node("span", "attention-forecast");
-      forecast.append(node("strong", "", delay(row.predicted)), node("span", "", `Вероятность >2 мин: ${probabilityLabel(row.probability, row.probabilityStatus)}`));
-      forecast.title = row.probabilityNote || "Вероятность задержки более двух минут; цвет определяется прогнозом в секундах.";
+      forecast.append(node("strong", "", delay(row.predicted)));
+      if (probabilityLabel(row.probability, row.probabilityStatus) !== "—") {
+        forecast.append(node("span", "", `Вероятность >2 мин: ${probabilityLabel(row.probability, row.probabilityStatus)}`));
+        forecast.title = row.probabilityNote || "Вероятность задержки более двух минут";
+      }
       button.append(identity, section, forecast);
       buttons.push(button);
       item.append(button);
@@ -472,74 +500,62 @@
     $("forecast-box").className = `forecast-box risk-${risk}`;
     text("detail-delay", delay(displayedDelay(vehicle)));
     $("detail-delay").style.color = vehicleColor(vehicle);
-    const inputMode = snapshot.mode === "replay" ? snapshot.replay?.deviation_source || "csv_snapshot" : snapshot.context?.arrival_mode;
-    const missingInput = inputMode === "csv_snapshot" ? "На текущий момент нет действующего отклонения из points.csv"
-      : inputMode === "gps" ? "Ожидаем подтверждение посещения остановки для расчёта отклонения"
-      : "Ожидаем подтверждённое прибытие или внешнее текущее отклонение";
-    const forecastStatus = apiStale() ? "Сохранённые данные · ожидаем восстановление связи с API"
-      : vehicle.prediction_availability && vehicle.prediction_availability.code !== "ready" ? vehicle.prediction_availability.message
-      : vehicle.status !== "fresh" ? "Нет свежего GPS · актуальный риск не показывается"
-      : !target ? "В плановом окне 10–15 минут сейчас нет остановки"
-      : !finite(vehicle.cur_dev_s) ? missingInput
-      : !finite(prediction?.predicted_delay_s) ? "Входные данные есть · ожидаем завершения расчёта"
-      : prediction.method === "fallback" ? "Резервная оценка · подробности в запросе и ответе"
-      : "Отклонение от расписания";
-    text("detail-forecast-status", fullUI ? forecastStatus : risk === "unknown" ? availabilityLabel(vehicle)
-      : prediction?.method === "fallback" ? "Резервная оценка" : "Отклонение от расписания");
-    text("detail-target", target?.name || "Цель не определена");
+    const onPlan = risk === "unknown";
+    text("detail-forecast-status", onPlan ? "По плану" : prediction?.method === "fallback" ? "Резервная оценка" : "Отклонение от расписания");
+    text("detail-target", target?.name || "");
+    $("detail-target").hidden = !target;
     text("detail-planned-arrival", target ? `${time(target.scheduled_at, true)} МСК` : "—");
+    $("detail-planned-arrival").parentElement.hidden = !target;
     const expected = expectedArrival(target?.scheduled_at, displayedDelay(vehicle));
-    text("detail-expected-arrival", expected ? `${time(expected, true)} МСК` : "Не оценено");
+    text("detail-expected-arrival", expected ? `${time(expected, true)} МСК` : "По расписанию");
     text("detail-risk", RISK[risk].short);
-    text("detail-current", delay(vehicle.cur_dev_s));
+    text("detail-current", finite(vehicle.cur_dev_s) ? delay(vehicle.cur_dev_s) : "—");
+    $("detail-current").parentElement.hidden = !finite(vehicle.cur_dev_s);
+    $("detail-data-panel").hidden = onPlan;
     const deviation = vehicle.current_deviation;
     const fromArrival = deviation && ["arrival", "demo_arrival", "generator_arrival", "gps_estimate", "door_estimate"].includes(deviation.source);
-    text("detail-deviation-source", !deviation ? "Текущее отклонение пока неизвестно" : fromArrival
+    text("detail-deviation-source", !deviation ? "" : fromArrival
       ? `${deviation.source === "gps_estimate" ? "GPS + расписание" : "Подтверждение прибытия"} · ${deviation.stop_name || deviation.planned_stop_id || "остановка"}`
       : deviation.source === "csv_snapshot" ? "Текущее отклонение из points.csv" : "Текущее отклонение из внешнего источника");
-    const deviationAge = deviation ? (timestamp(snapshot.clock_time) - timestamp(deviation.observed_at)) / 1000 : null;
-    const gpsStatus = vehicle.gps_detector;
-    const gpsReasons = {awaiting_gps:"ожидаем GPS", terminal_occupancy_without_reentry:"ждём выезда и возвращения на конечную", no_schedule:"нет плана", moving:"автобус движется", confirming_stop:"ждём следующую точку для подтверждения", candidate_after_gap:"подтверждаем остановку после пропуска GPS", ambiguous_stop:"несколько подходящих посещений; пока неизвестно", outside_stop_window:"не найдено подходящее плановое посещение", invalid_gps:"недостоверный GPS", late_or_duplicate:"повтор или запоздалый пакет", event_after_receipt:"несогласованные часы сообщения", receipt_out_of_order:"нарушен порядок получения", plan_finished:"план завершён", at_confirmed_stop:"остановка уже распознана", confirmed:"прибытие распознано", confirmed_by_doors:"прибытие оценено по телеметрии", confirmed_after_departure:"прибытие подтверждено после отправления", confirmed_after_skipped_visits:"прибытие распознано после пропуска посещений", outside_absolute_schedule_window:"GPS не согласуется с планом в допустимом окне", skip_before_expected_time:"ожидаем однозначное сопоставление с планом"};
-    text("detail-deviation-time", ["gps_estimate", "door_estimate"].includes(deviation?.source) ? `Подтверждено в ${time(deviation.received_at, true)} МСК; оценка по дискретной телеметрии, не точный операционный факт.${finite(deviation.uncertainty_s) ? ` Интервал наблюдений ${deviation.uncertainty_s} с.` : ""}` : deviation ? `${fromArrival ? "Прибытие" : "Подсказка"} ${duration(deviationAge)} назад${deviation.valid_until ? ` · действует до ${time(deviation.valid_until, true)} МСК` : ""}` : gpsStatus ? `GPS-детектор: ${gpsReasons[gpsStatus.reason] || "ожидание подтверждения остановки"}` : "Нет входного события прибытия");
-    text("detail-prediction-input", prediction ? `Вход расчёта: ${delay(vehicle.prediction_current_delay_s)} · ${time(prediction.issued_at, true)} МСК` : "Завершённого прогноза для текущей цели нет");
+    text("detail-deviation-time", deviation ? `Наблюдение ${time(deviation.observed_at, true)} МСК${finite(deviation.uncertainty_s) ? ` · интервал GPS ${deviation.uncertainty_s} с` : ""}` : "");
+    text("detail-prediction-input", prediction ? `Вход расчёта: ${delay(vehicle.prediction_current_delay_s)} · ${time(prediction.issued_at, true)} МСК` : "");
     $("detail-trace").href = `/api/v1/vehicles/${encodeURIComponent(vehicle.tr_id)}/forecast-trace`;
     $("detail-trace").hidden = !prediction;
-    text("detail-speed", finite(vehicle.speed_kmh) ? `${Math.round(vehicle.speed_kmh)} км/ч` : "Нет данных");
-    const probability = risk === "unknown" ? null : prediction?.probability_late;
-    text("detail-probability", probabilityLabel(probability, prediction?.probability_status));
-    $("detail-probability").title = prediction?.probability_note || "Для текущих входов оценка вероятности недоступна";
-    text("detail-probability-note", apiStale() || vehicle.status !== "fresh" ? "Актуальность данных не подтверждена; вероятность сейчас не показана." : prediction?.probability_note || "Для этого прогноза вероятность не оценена");
-    text("detail-freshness", finite(vehicle.age_s) ? `${duration(vehicle.age_s)} назад${apiStale() ? " · данные не обновляются" : ""}` : "Нет данных");
-    $("detail-freshness").classList.toggle("is-stale", vehicle.status !== "fresh" || apiStale());
+    text("detail-speed", finite(vehicle.speed_kmh) ? `${Math.round(vehicle.speed_kmh)} км/ч` : "—");
+    const probability = onPlan ? null : prediction?.probability_late;
+    const probabilityText = probabilityLabel(probability, prediction?.probability_status);
+    text("detail-probability", probabilityText);
+    $("detail-probability").title = probabilityText !== "—" ? prediction?.probability_note || "" : "";
+    $("detail-probability").parentElement.hidden = probabilityText === "—";
+    text("detail-probability-note", probabilityText !== "—" ? prediction?.probability_note || "" : "");
+    $("detail-probability-note").parentElement.hidden = probabilityText === "—";
+    text("detail-freshness", finite(vehicle.age_s) ? `${duration(vehicle.age_s)} назад` : "—");
     const explanation = vehicle.explanation;
     const modelExplanation = prediction?.forecast_explanation;
-    const transformerAnalysis = modelExplanation?.transformer_analysis;
-    text("detail-cause", apiStale() ? "Нет актуальных данных" : explanation?.cause_status === "hypothesis"
+    text("detail-cause", onPlan ? "По плану" : explanation?.cause_status === "hypothesis"
       ? explanation.possible_cause : explanation?.summary || "Причина задержки не установлена");
-    text("detail-cause-status", apiStale() ? "Данные не обновляются; актуальность не подтверждена" : explanation?.cause_status === "hypothesis" ? "Гипотеза по телеметрии, требует проверки" : explanation?.observation_status === "observed" ? "Наблюдение · физическая причина не установлена" : "Причина не установлена");
-    text("detail-observed-at", explanation?.evaluated_at ? `Наблюдения на ${time(explanation.evaluated_at, true)} МСК` : "");
-    const observations = list(explanation?.observations)
-      .filter(item => item.kind !== "data_quality" && item.title !== explanation?.summary)
-      .slice(0, 3).map(item => item.evidence);
-    const observationsKey = JSON.stringify(observations);
-    if ($("detail-observations").dataset.content !== observationsKey) {
-      $("detail-observations").replaceChildren(...observations.map(value => node("li", "", value)));
-      $("detail-observations").dataset.content = observationsKey;
-    }
-    const modelFactors = list(modelExplanation?.factors)
+    text("detail-cause-status", onPlan ? "" : explanation?.cause_status === "hypothesis" ? "Гипотеза по телеметрии, требует проверки" : explanation?.observation_status === "observed" ? "Наблюдение · физическая причина не установлена" : "");
+    text("detail-observed-at", !onPlan && explanation?.evaluated_at ? `Наблюдения на ${time(explanation.evaluated_at, true)} МСК` : "");
+    const observations = onPlan ? [] : list(explanation?.observations)
+      .filter(item => item.kind !== "data_quality" && item.title !== explanation?.summary && item.evidence)
+      .slice(0, 2).map(item => item.evidence);
+    const modelFactors = onPlan ? [] : list(modelExplanation?.factors)
       .filter(item => item && finite(item.effect_s))
       .sort((left, right) => Math.abs(right.effect_s) - Math.abs(left.effect_s))
-      .slice(0, 3)
-      .map(item => `${item.title}: ${item.effect_s >= 0 ? "повышает" : "снижает"} прогноз примерно на ${Math.abs(item.effect_s).toFixed(0)} с`);
-    const factorsKey = JSON.stringify(modelFactors);
-    if ($("detail-model-factors").dataset.content !== factorsKey) {
-      $("detail-model-factors").replaceChildren(...modelFactors.map(value => node("li", "", value)));
-      $("detail-model-factors").dataset.content = factorsKey;
+      .slice(0, 2)
+      .map(item => `Фактор модели — ${item.title}: ${item.effect_s >= 0 ? "повышает" : "снижает"} прогноз примерно на ${Math.abs(item.effect_s).toFixed(0)} с`);
+    const reasons = [...observations, ...modelFactors];
+    const reasonsKey = JSON.stringify(reasons);
+    if ($("detail-observations").dataset.content !== reasonsKey) {
+      $("detail-observations").replaceChildren(...reasons.map((value, index) => {
+        const item = node("li", "", value);
+        if (index >= observations.length) item.title = "Вклад в расчёт модели, не физическая причина задержки";
+        return item;
+      }));
+      $("detail-observations").dataset.content = reasonsKey;
     }
-    text("detail-model-explanation-note", modelExplanation
-      ? `${transformerAnalysis?.summary || ""} ${modelExplanation.history_points} наблюдений за ${duration(modelExplanation.history_span_s)}. Вклад в расчёт, не физическая причина.`
-      : "Аддитивное объяснение обученной модели для этого прогноза недоступно.");
-    text("detail-recommendation", vehicle.recommendation || "Оцените ситуацию на маршруте. Эффект изменения выпуска и времени стоянки модель не рассчитывает.");
+    $("detail-observations").hidden = reasons.length === 0;
+    text("detail-recommendation", onPlan ? "Продолжить наблюдение за движением." : vehicle.recommendation || "Проверьте ситуацию на маршруте.");
 
   }
 
@@ -586,11 +602,10 @@
       record.predicted.title = delay(displayedDelay(vehicle));
       record.predicted.style.color = vehicleColor(vehicle);
       record.badge.textContent = risk === "unknown" ? availabilityLabel(vehicle) : RISK[risk].short;
-      record.badge.title = apiStale() ? "Связь с API потеряна; актуальность данных не подтверждена."
-        : vehicle.prediction_availability?.message || RISK[risk].label;
-      record.badge.className = `risk-badge risk-${risk}`;
+      record.badge.title = RISK[risk].label;
+      record.badge.className = `risk-badge risk-${risk === "unknown" ? "green" : risk}`;
       record.age.textContent = duration(vehicle.age_s, true);
-      record.age.classList.toggle("is-stale", vehicle.status !== "fresh" || apiStale());
+
       record.button.setAttribute("aria-label", `Открыть: ${vehicleName(vehicle)}`);
       record.button.setAttribute("aria-pressed", String(key === selectedId));
       if (body.children[index] !== record.row) body.insertBefore(record.row, body.children[index] || null);
@@ -629,10 +644,11 @@
       const section = node("p", "", `Участок: ${incident.section || "не указан"}`);
       const tags = node("div", "timeline-tags");
       const expected = timestamp(incident.estimated_arrival_at) !== null ? incident.estimated_arrival_at : expectedArrival(incident.target_time, incident.predicted_delay_s);
-      tags.append(node("strong", "", `Прогноз ${delay(incident.predicted_delay_s)}`), node("span", "", `План ${time(incident.target_time, true)} МСК`), node("span", "", `Ожидалось ${expected ? `${time(expected, true)} МСК` : "не оценено"}`));
+      tags.append(node("strong", "", `Прогноз ${delay(incident.predicted_delay_s)}`), node("span", "", `План ${time(incident.target_time, true)} МСК`), node("span", "", `Ожидалось ${expected ? `${time(expected, true)} МСК` : "по расписанию"}`));
       if (fullUI && finite(incident.lead_time_s)) tags.append(node("span", "", `При выдаче до плана: ${duration(incident.lead_time_s)}`));
       if (fullUI && finite(incident.estimated_lead_time_s)) tags.append(node("span", "", `До ожидаемого прибытия: ${duration(incident.estimated_lead_time_s)} · оценка`));
       const probability = node("p", "incident-probability", `Вероятность >2 мин при выдаче: ${probabilityLabel(incident.probability_late, incident.probability_status)}`);
+      probability.hidden = probabilityLabel(incident.probability_late, incident.probability_status) === "—";
       if (incident.probability_note) probability.title = incident.probability_note;
       const explanation = incident.explanation;
       const cause = node("p", "incident-cause", explanation?.cause_status === "hypothesis" ? `Предполагаемая причина: ${explanation.possible_cause}` : explanation?.summary ? `Наблюдение: ${explanation.summary}` : "Причина не установлена");
@@ -712,11 +728,11 @@
 
   function renderReplay() {
     const active = snapshot?.mode === "replay";
-    $("replay-settings").hidden = !active;
+    $("replay-settings").hidden = false;
     const ctx = snapshot?.context;
     const source = active ? snapshot.replay?.deviation_source || "csv_snapshot" : ctx?.arrival_mode;
     text("input-source-badge", `Отклонение: ${source === "gps" ? "GPS + план" : source === "csv_snapshot" ? "готовое points.csv" : snapshot?.mode === "demo" ? "демо-прибытия" : source ? "внешние события" : "ожидание"}`);
-    if (!active) return;
+    if (!active) { text("replay-active-source", "Выберите архив"); return; }
     const replay = snapshot.replay;
     const split = replay.dataset_split || "validate";
     text("replay-active-source", `${split} · ${source === "gps" ? "считаем сами по GPS" : "готовое отклонение CSV"}`);
@@ -735,13 +751,54 @@
   }
 
   function renderReplayHelp() {
-    const train = $("replay-split").value === "train";
-    $("replay-source").querySelector('option[value="csv_snapshot"]').disabled = train;
-    if (train) $("replay-source").value = "gps";
+    const split = $("replay-split").value;
+    const gpsOnly = split === "train" || (split === "custom" && !customArchive.has_points);
+    $("replay-split").querySelector('option[value="custom"]').disabled = !customArchive.available;
+    $("replay-source").querySelector('option[value="csv_snapshot"]').disabled = gpsOnly;
+    if (gpsOnly) $("replay-source").value = "gps";
     text("replay-source-help", $("replay-source").value === "gps"
       ? "Отклонение определяется по GPS и расписанию. История до начала нужна для распознавания предыдущих остановок."
       : "Отклонение берётся из points.csv; координаты — из телеметрии.");
     setButtonBusy();
+  }
+
+  async function loadCustomMetadata() {
+    try {
+      customArchive = await request("/api/v1/replay/custom");
+      renderReplayHelp();
+      if (customArchive.available) text("custom-import-status", "Свой архив загружен. Он хранится до перезапуска backend.");
+    } catch (_) { /* The main connection banner reports API errors. */ }
+  }
+
+  async function importCustomReplay(event) {
+    event.preventDefault();
+    if (busy) return;
+    const traffic = $("custom-traffic").files[0];
+    const schedule = $("custom-schedule").files[0];
+    const points = $("custom-points").files[0];
+    if (!traffic || !schedule) { text("custom-import-status", "Выберите телеметрию и расписание."); return; }
+    const limit = 80 * 1024 * 1024;
+    if ([traffic, schedule, points].reduce((sum, file) => sum + (file?.size || 0), 0) > limit) {
+      text("custom-import-status", "Общий размер запроса не должен превышать 80 МиБ."); return;
+    }
+    busy = true;
+    setButtonBusy();
+    text("custom-import-status", "Читаем и проверяем архив…");
+    try {
+      const [traffic_csv, schedule_csv, points_csv] = await Promise.all([traffic.text(), schedule.text(), points ? points.text() : null]);
+      const body = JSON.stringify({traffic_csv, schedule_csv, points_csv, timezone: $("custom-timezone").value});
+      if (new TextEncoder().encode(body).length > limit) throw new Error("Общий размер запроса не должен превышать 80 МиБ.");
+      const result = await request("/api/v1/replay/import", {method: "POST", headers: {"Content-Type": "application/json"}, body}, 60000);
+      customArchive = {...result.custom, start: result.replay.start, end: result.replay.end};
+      replayConfigSignature = "";
+      resetSelection();
+      await poll();
+      renderReplayHelp();
+      text("custom-import-status", "Свой архив загружен на паузе. Нажмите «Продолжить». Файлы хранятся до перезапуска backend.");
+      toast("Свой архив готов к воспроизведению");
+    } catch (error) {
+      text("custom-import-status", `Архив не загружен. ${error.name === "AbortError" ? "Сервис не ответил вовремя; проверьте состояние потока." : error.message}`);
+    } finally { busy = false; setButtonBusy(); }
   }
 
   function startReplay(event) {
@@ -756,6 +813,14 @@
       warmup_minutes: Number($("replay-warmup").value), timezone: $("replay-timezone").value, tr_ids,
       dataset_split: $("replay-split").value, deviation_source: $("replay-source").value, speed: Number($("demo-speed").value || 10), paused: true },
       "Архив загружен до конца данных. Нажмите Продолжить.");
+  }
+
+  function resetSelection() {
+    selectedId = null;
+    incidentSignature = "";
+    $("route-filter").value = "all";
+    $("risk-filter").value = "all";
+    $("vehicle-search").value = "";
   }
 
   function selectVehicle(id) {
@@ -821,10 +886,7 @@
     setButtonBusy();
     try {
       await request(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, url === "/api/v1/replay/load" ? 30000 : 5000);
-      if (payload.action === "reset" || payload.mode) {
-        selectedId = null;
-        incidentSignature = "";
-      }
+      if (payload.action === "reset" || payload.mode || url === "/api/v1/replay/load") resetSelection();
       await poll();
       toast(successText);
     } catch (error) {
@@ -848,7 +910,14 @@
   $("source-button").addEventListener("click", () => command("/api/v1/demo/control", { action: snapshot?.demo?.source_enabled ? "source_off" : "source_on" }, snapshot?.demo?.source_enabled ? "Источник выключен. Возраст данных будет расти." : "Источник включён"));
   $("reset-button").addEventListener("click", () => command(playbackControl(), { action: "reset" }, "Воспроизведение сброшено"));
   $("replay-form").addEventListener("submit", startReplay);
-  $("replay-split").addEventListener("change", () => { if ($("replay-split").value === "train") $("replay-warmup").value = "30"; renderReplayHelp(); });
+  $("replay-split").addEventListener("change", () => {
+    const custom = $("replay-split").value === "custom";
+    $("replay-start").value = custom && customArchive.start ? new Date(customArchive.start).toISOString().slice(0,16) : "2026-01-06T11:30";
+    $("replay-timezone").value = custom ? customArchive.timezone || "UTC" : "UTC";
+    $("replay-warmup").value = "30";
+    renderReplayHelp();
+  });
+  $("custom-replay-form").addEventListener("submit", importCustomReplay);
   $("replay-source").addEventListener("change", () => { $("replay-warmup").value = $("replay-source").value === "gps" ? "30" : "5"; renderReplayHelp(); });
   $("replay-selection").addEventListener("change", setButtonBusy);
   $("demo-speed").addEventListener("change", () => command(playbackControl(), { action: "speed", speed: Number($("demo-speed").value) }, "Скорость воспроизведения изменена"));
@@ -871,5 +940,6 @@
   window.addEventListener("pagehide", () => clearTimeout(pollTimer));
   syncNavigation();
   render();
+  loadCustomMetadata();
   poll();
 })();

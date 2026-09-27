@@ -1,8 +1,11 @@
 """HTTP API диспетчера и жизненный цикл TCP-приёмника; запуск строго в один worker."""
 import asyncio
 import contextlib
+import csv
 import logging
 import os
+import shutil
+import tempfile
 import time
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -18,7 +21,8 @@ from backend.engine import Engine, LiveContext, utcnow
 from backend.arrivals import ArrivalConflict, ArrivalInput
 from backend.generator_bridge import GeneratorControl, GeneratorStart, ProducerState
 from backend.ndtp import NDTPServer
-from backend.replay import ReplayConfig, ReplayControl, load_replay
+from backend.replay import (CUSTOM_IMPORT_SECONDS, MAX_CUSTOM_IMPORT_BYTES, ReplayConfig,
+                            ReplayControl, ReplayImport, load_replay, prepare_custom_replay)
 from common.contracts import Contract, Telemetry
 from common.state import DashboardState, ForecastTrace, IncidentExport, Metrics
 
@@ -53,6 +57,10 @@ def create_app(*, start_background: bool = True, enable_ndtp: bool = True, ml_ur
             engine.generator_url = generator_url or os.getenv('GENERATOR_URL', 'http://127.0.0.1:8002')
             app.state.engine = engine
             app.state.generator_control_lock = asyncio.Lock()
+            app.state.replay_load_lock = asyncio.Lock()
+            app.state.custom_dataset = None
+            custom_storage = tempfile.TemporaryDirectory(prefix='ritm-custom-')
+            app.state.custom_storage = Path(custom_storage.name)
             listener = NDTPServer(engine.on_nav, engine.ndtp_error, host=os.getenv("NDTP_HOST", "127.0.0.1"), port=int(os.getenv("NDTP_PORT", "9201")))
             if enable_ndtp:
                 await listener.start()
@@ -78,6 +86,7 @@ def create_app(*, start_background: bool = True, enable_ndtp: bool = True, ml_ur
                         await task
                 if enable_ndtp:
                     await listener.close()
+                custom_storage.cleanup()
 
     app = FastAPI(title="Транспорт · Backend", version="0.1.0", lifespan=lifespan,
                   description="Диспетчерская система: demo, отдельный synthetic generator, live NDTP и CSV replay. Отдельный ML-сервис с frozen-моделью; при недоступности — явный persistence fallback. Времена RFC3339 с offset.")
@@ -136,7 +145,7 @@ def create_app(*, start_background: bool = True, enable_ndtp: bool = True, ml_ur
 
     @app.post('/api/v1/replay/load', tags=['Исторический replay'])
     async def replay_load(config: ReplayConfig, request: Request):
-        """Загрузить validate или train из REPLAY_DATA_DIR; train только в режиме gps.
+        """Загрузить validate/train из REPLAY_DATA_DIR или ранее импортированный custom.
 
         Из train/schedule.csv используются только плановые поля. labels и
         фактические прибытия не становятся входами детектора или модели.
@@ -151,20 +160,110 @@ def create_app(*, start_background: bool = True, enable_ndtp: bool = True, ml_ur
         По умолчанию начинает с паузы. Загрузка очищает текущий контекст только
         после успешной проверки CSV. Пути файлов через API не задаются.
         """
-        root = os.getenv('REPLAY_DATA_DIR')
-        if not root:
-            raise HTTPException(409, 'Задайте REPLAY_DATA_DIR и перезапустите backend; см. README')
-        e = request.app.state.engine
-        version = e.version
-        try:
-            replay = await asyncio.to_thread(load_replay, Path(root), config)
-        except (OSError, ValueError, KeyError) as exc:
-            log.warning('Replay load: %s', exc)
-            raise HTTPException(422, 'Не удалось загрузить срез: проверьте CSV, ТС, окно и логи backend') from exc
-        if e.version != version:
-            raise HTTPException(409, 'Контекст изменился во время чтения CSV; повторите загрузку')
-        e.set_replay(replay)
-        return {'ok': True, 'replay': replay.state(e)}
+        lock = request.app.state.replay_load_lock
+        if lock.locked():
+            raise HTTPException(409, 'Другая загрузка CSV ещё выполняется')
+        async with lock:
+            if config.dataset_split == 'custom':
+                custom = request.app.state.custom_dataset
+                if custom is None:
+                    raise HTTPException(409, 'Сначала импортируйте свои CSV; после перезапуска backend импорт нужно повторить')
+                root = custom['root']
+                if 'timezone' not in config.model_fields_set:
+                    config = config.model_copy(update={'timezone': custom['timezone']})
+                if config.deviation_source == 'csv_snapshot' and not custom['has_points']:
+                    raise HTTPException(422, 'Для csv_snapshot загрузите points.csv')
+            else:
+                root = os.getenv('REPLAY_DATA_DIR')
+                if not root:
+                    raise HTTPException(409, 'Задайте REPLAY_DATA_DIR и перезапустите backend; см. README')
+            e = request.app.state.engine
+            version = e.version
+            try:
+                replay = await asyncio.to_thread(load_replay, Path(root), config)
+            except (OSError, ValueError, KeyError, TypeError, OverflowError, csv.Error) as exc:
+                log.warning('Replay load failed: %s', type(exc).__name__)
+                raise HTTPException(422, 'Не удалось загрузить срез: проверьте CSV, ТС, окно и логи backend') from exc
+            if e.version != version:
+                raise HTTPException(409, 'Контекст изменился во время чтения CSV; повторите загрузку')
+            e.set_replay(replay)
+            return {'ok': True, 'replay': replay.state(e)}
+
+    def custom_metadata(request):
+        custom = request.app.state.custom_dataset
+        return {'available': custom is not None, 'has_points': bool(custom and custom['has_points']),
+                'timezone': custom['timezone'] if custom else None,
+                'start': custom['start'] if custom else None, 'end': custom['end'] if custom else None,
+                'expires_on_restart': True}
+
+    @app.get('/api/v1/replay/custom', tags=['Исторический replay'])
+    async def custom_status(request: Request):
+        """Доступность пользовательского архива; серверные пути не раскрываются."""
+        return custom_metadata(request)
+
+    @app.post('/api/v1/replay/import', tags=['Исторический replay'], openapi_extra={
+        'requestBody': {'required': True, 'content': {'application/json': {'schema': ReplayImport.model_json_schema()}}}})
+    async def replay_import(request: Request):
+        """Проверить CSV и активировать custom на паузе, с GPS и началом по данным.
+
+        Весь JSON ограничен 80 MiB; приём и обработка — по 30 секунд.
+        Максимум 500000 строк traffic+points, 20000 строк плана, 128 ТС.
+        Имена файлов фиксированы. Bundled train/validate не изменяются.
+        Ошибка оставляет прежний контекст и прежний custom; импорт удаляется
+        после перезапуска backend. points необязателен и включается только
+        отдельным /replay/load с deviation_source=csv_snapshot.
+        """
+        lock = request.app.state.replay_load_lock
+        if lock.locked():
+            raise HTTPException(409, 'Другая загрузка CSV ещё выполняется')
+        async with lock:
+            e = request.app.state.engine
+            version = e.version
+            content_length = request.headers.get('content-length')
+            if content_length is not None:
+                try:
+                    declared = int(content_length)
+                except ValueError as exc:
+                    raise HTTPException(400, 'Некорректный Content-Length') from exc
+                if declared < 0:
+                    raise HTTPException(400, 'Некорректный Content-Length')
+                if declared > MAX_CUSTOM_IMPORT_BYTES:
+                    raise HTTPException(413, 'JSON с CSV превышает 80 MiB')
+            async def read_limited():
+                body = bytearray()
+                async for chunk in request.stream():
+                    if len(body)+len(chunk) > MAX_CUSTOM_IMPORT_BYTES:
+                        raise HTTPException(413, 'JSON с CSV превышает 80 MiB')
+                    body.extend(chunk)
+                return body
+            try:
+                body = await asyncio.wait_for(read_limited(), timeout=CUSTOM_IMPORT_SECONDS)
+            except TimeoutError as exc:
+                raise HTTPException(408, 'Время приёма CSV истекло') from exc
+            staged = None
+            try:
+                payload = ReplayImport.model_validate_json(body)
+                del body
+                staged = Path(tempfile.mkdtemp(prefix='upload-', dir=request.app.state.custom_storage))
+                replay = await asyncio.to_thread(prepare_custom_replay, staged, payload)
+                if e.version != version:
+                    raise HTTPException(409, 'Контекст изменился во время импорта CSV; повторите загрузку')
+                previous = request.app.state.custom_dataset
+                # Проверка завершена; commit без await не смешивается с другими командами.
+                e.set_replay(replay)
+                request.app.state.custom_dataset = {'root': staged, 'timezone': payload.timezone,
+                    'has_points': payload.points_csv is not None,
+                    'start': replay.config.start.isoformat(), 'end': replay.end.isoformat()}
+                staged = None
+                if previous:
+                    shutil.rmtree(previous['root'], ignore_errors=True)
+                return {'ok': True, 'replay': replay.state(e), 'custom': custom_metadata(request)}
+            except (OSError, ValueError, KeyError, TypeError, OverflowError, csv.Error) as exc:
+                log.warning('Custom CSV import failed: %s', type(exc).__name__)
+                raise HTTPException(422, 'Не удалось импортировать CSV: проверьте заголовки, даты, координаты и ограничения размера') from exc
+            finally:
+                if staged is not None:
+                    shutil.rmtree(staged, ignore_errors=True)
 
     @app.post('/api/v1/generator/start', tags=['Сценарный генератор'])
     async def generator_start(config: GeneratorStart, request: Request):
