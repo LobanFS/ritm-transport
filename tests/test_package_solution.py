@@ -7,7 +7,17 @@ import zipfile
 
 import pytest
 
-from tools.package_solution import REPORTS, ROOT_FILES, SOURCE_DIRS, existing_reports, verify_archive
+from tools.package_solution import DATASET_FILES, REPORTS, ROOT_FILES, SOURCE_DIRS, existing_reports, verify_archive
+
+
+def test_release_contains_replay_inputs_with_original_checksums():
+    root = Path(__file__).resolve().parents[1]
+    manifest = json.loads((root/'dataset/manifest.json').read_text())
+    assert set(DATASET_FILES) == {'dataset/manifest.json'} | {'dataset/'+name for name in manifest['files']}
+    for name, metadata in manifest['files'].items():
+        path = root/'dataset'/name
+        assert path.stat().st_size == metadata['bytes']
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == metadata['sha256']
 
 
 def test_docker_build_inputs_are_present_in_the_release():

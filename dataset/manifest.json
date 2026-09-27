@@ -1,0 +1,26 @@
+{
+  "source": "https://disk.yandex.ru/d/CA6tsj4aJJ4Aaw",
+  "description": "Original organizer CSV files used by historical replay; byte-for-byte copies.",
+  "files": {
+    "train/traffic.csv": {
+      "bytes": 49170493,
+      "sha256": "1890b36e19765c970b3db3c15fc372e2c6dfcc2b20380679637be9115fe303cd"
+    },
+    "train/schedule.csv": {
+      "bytes": 2690246,
+      "sha256": "f7c109efd50d358d202b6c1fc5a7cb5be14ccc489c7adb5f3fd897e326512115"
+    },
+    "validate/traffic.csv": {
+      "bytes": 17117773,
+      "sha256": "3c74bb9d3cc5e076a2e7f89de7e78fb103c350757d16c9d629de651ee09bf517"
+    },
+    "validate/schedule_plan.csv": {
+      "bytes": 683160,
+      "sha256": "c9b561743a5cb83616941b02b47c5aded89e75218d93c13a282a2e8c790787c8"
+    },
+    "validate/points.csv": {
+      "bytes": 12645,
+      "sha256": "284d35f25cf7b13ed3f1ef0556c41910c6e6abfe5c523d2c2d1d36f3d67c64a6"
+    }
+  }
+}

@@ -1,8 +1,9 @@
 """Один запуск для жюри: Docker + готовый bundle, без Python ML-стека на хосте.
 
-Из корня репозитория: python3 tools/start_solution.py --data-dir /path/to/dataset
-По умолчанию --ui-mode full и live без синтетического потока. Явный --data-dir
-загружает архив: dispatcher сразу проигрывает его, full оставляет на паузе.
+Из корня репозитория: python3 tools/start_solution.py
+По умолчанию загружается dataset/train из репозитория, интерфейс — full.
+Dispatcher сразу проигрывает архив, full оставляет его на паузе.
+--data-dir выбирает внешний архив; --live запускает ожидание живого потока.
 Запуск помощника выбирает источник; загрузка config.js сама источник не меняет.
 Обучение и отправка данных в облако не нужны.
 """
@@ -157,11 +158,14 @@ def replay_readiness(state, *, after_cycle):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--model-dir', type=Path, default=ROOT/'artifacts/model')
-    parser.add_argument('--data-dir', type=Path, help='Официальная раздача для CSV replay; read-only mount')
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument('--data-dir', type=Path,
+                        help='Внешняя раздача для CSV replay; по умолчанию dataset/ из репозитория')
+    source.add_argument('--live', action='store_true', help='Ожидать живую телеметрию, не загружая CSV')
     parser.add_argument('--ui-mode', choices=UI_MODES, default=os.getenv('DASHBOARD_UI_MODE', 'full'),
                         help='full — полный интерфейс (по умолчанию), dispatcher — рабочий экран; также DASHBOARD_UI_MODE')
-    parser.add_argument('--dataset-split', choices=('validate', 'train'), default='validate',
-                        help='Набор replay; train требует только traffic.csv и schedule.csv и считает отклонение по GPS')
+    parser.add_argument('--dataset-split', choices=('validate', 'train'), default='train',
+                        help='Набор replay: train по умолчанию, отклонение считается по GPS; validate использует points.csv')
     parser.add_argument('--context', help='Docker context; глобальная настройка не меняется')
     parser.add_argument('--official-emulator', action='store_true', help='Загрузить официальный tar и поднять сервис эмулятора; настройка NDTP отдельной командой')
     parser.add_argument('--no-build', action='store_true', help='Использовать уже собранные образы')
@@ -171,22 +175,21 @@ def main():
         parser.error('DASHBOARD_UI_MODE должен быть dispatcher или full')
     bundle = args.model_dir.resolve()
     metadata = inspect_bundle(bundle)
-    data = args.data_dir.resolve() if args.data_dir else None
-    if args.dataset_split == 'train' and data is None:
-        parser.error('--dataset-split train требует --data-dir')
+    data = None if args.live else (args.data_dir or ROOT/'dataset').resolve()
     replay_config = ({'dataset_split':'train', 'deviation_source':'gps', 'warmup_minutes':30}
-                     if args.dataset_split == 'train' else {})
+                     if args.dataset_split == 'train' else {'dataset_split':'validate'})
     if data:
         required = (('train/traffic.csv','train/schedule.csv') if args.dataset_split == 'train' else
                     ('validate/points.csv','validate/traffic.csv','validate/schedule_plan.csv'))
         for name in required:
             if not (data/name).is_file():
                 parser.error(f'Нет файла: {data/name}')
-    if args.official_emulator and (not data or not (data/'ndtp-telemetry-emulator.tar').is_file()):
+    if args.official_emulator and (not args.data_dir or not (data/'ndtp-telemetry-emulator.tar').is_file()):
         parser.error('--official-emulator требует --data-dir с ndtp-telemetry-emulator.tar')
     if args.check_only:
         print(json.dumps(dict(status='inputs_valid',ui_mode=args.ui_mode,
                               source_mode='replay' if data else 'live',
+                              data_dir=str(data) if data else None,
                               dataset_split=args.dataset_split if data else None,**metadata),ensure_ascii=False))
         return
     docker = ['docker'] + (['--context',args.context] if args.context else [])
@@ -204,7 +207,7 @@ def main():
     out = ROOT/'artifacts/start-solution'
     out.mkdir(parents=True,exist_ok=True)
     report = dict(started_at=datetime.now(timezone.utc).isoformat(),passed=False,command=compose,
-                  ui_mode=args.ui_mode,**metadata)
+                  ui_mode=args.ui_mode,data_dir=str(data) if data else None,**metadata)
     try:
         start = time.monotonic()
         subprocess.run(compose+['up','-d','--wait','--wait-timeout','90']+([] if args.no_build else ['--build']),

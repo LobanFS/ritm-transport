@@ -11,14 +11,15 @@ from tools import start_solution
 
 
 @pytest.mark.parametrize('ui_mode', ['dispatcher', 'full'])
-def test_ui_preflight_uses_live_without_archive(tmp_path, monkeypatch, capsys, ui_mode):
+def test_ui_preflight_uses_explicit_live_without_archive(tmp_path, monkeypatch, capsys, ui_mode):
     bundle, _, _ = setup_bundle(tmp_path, monkeypatch)
     monkeypatch.setenv('DASHBOARD_UI_MODE', ui_mode)
-    monkeypatch.setattr(sys, 'argv', ['start_solution.py', '--model-dir', str(bundle), '--check-only'])
+    monkeypatch.setattr(sys, 'argv', ['start_solution.py', '--model-dir', str(bundle), '--live', '--check-only'])
     start_solution.main()
     result = json.loads(capsys.readouterr().out)
     assert result['ui_mode'] == ui_mode
     assert result['source_mode'] == 'live'
+    assert result['dataset_split'] is None and result['data_dir'] is None
 
 
 def test_invalid_ui_environment_is_rejected_before_model_or_runtime_access(monkeypatch):
@@ -31,11 +32,13 @@ def test_invalid_ui_environment_is_rejected_before_model_or_runtime_access(monke
 
 
 @pytest.mark.parametrize('ui_mode', ['dispatcher', 'full'])
-@pytest.mark.parametrize('with_archive', [False, True])
-def test_launch_selects_explicit_source_and_passes_ui_mode(tmp_path, monkeypatch, ui_mode, with_archive):
+@pytest.mark.parametrize('source', ['bundled_train', 'bundled_validate', 'external_train', 'external_validate', 'live'])
+def test_launch_selects_source_and_passes_ui_mode(tmp_path, monkeypatch, ui_mode, source):
     bundle, _, scope = setup_bundle(tmp_path, monkeypatch)
     metadata = start_solution.inspect_bundle(bundle)
     api_calls, commands = [], []
+    with_archive = source != 'live'
+    split = 'validate' if source.endswith('validate') else 'train'
     state = {'mode':'replay' if with_archive else 'live', 'vehicles':[],
              'health':{'ml':'ok'}, 'metrics':{'pipeline_cycles':0}, 'context':{'version':1}}
     if with_archive:
@@ -44,7 +47,7 @@ def test_launch_selects_explicit_source_and_passes_ui_mode(tmp_path, monkeypatch
                                {'prediction':{'method':'unavailable', 'predicted_delay_s':None},
                                 'prediction_availability':{'code':'deviation_missing'}},
                                {'prediction':None, 'prediction_availability':{'code':'no_target'}}],
-                     replay={'dataset_split':'validate'})
+                     replay={'dataset_split':split})
     def fake_api(base, path, payload=None):
         api_calls.append((path,payload))
         if path == '/model': return runtime_card(metadata, scope)
@@ -62,29 +65,38 @@ def test_launch_selects_explicit_source_and_passes_ui_mode(tmp_path, monkeypatch
     monkeypatch.setenv('DASHBOARD_UI_MODE', 'full' if ui_mode == 'dispatcher' else 'dispatcher')
     argv = ['start_solution.py','--model-dir',str(bundle),'--ui-mode',ui_mode]
     if with_archive:
-        data=tmp_path/'dataset'
-        (data/'validate').mkdir(parents=True)
-        for name in ('points.csv','traffic.csv','schedule_plan.csv'):
-            (data/'validate'/name).write_text('fixture header\n')
-        argv += ['--data-dir',str(data)]
+        data = tmp_path/'external-dataset' if source.startswith('external') else start_solution.ROOT/'dataset'
+        write_dataset(data, split)
+        if source.startswith('external'):
+            argv += ['--data-dir',str(data)]
+        if split == 'validate':
+            argv += ['--dataset-split','validate']
+    else:
+        argv += ['--live']
     monkeypatch.setattr(sys, 'argv', argv)
     start_solution.main()
     assert commands[0][1]['env']['DASHBOARD_UI_MODE'] == ui_mode
     assert commands[0][1]['env']['INITIAL_MODE'] == 'live'
     assert not any('generator' in path for path,_ in api_calls)
     if with_archive:
-        assert ('/api/v1/replay/load',{}) in api_calls
+        expected_config = ({'dataset_split':'train', 'deviation_source':'gps', 'warmup_minutes':30}
+                           if split == 'train' else {'dataset_split':'validate'})
+        assert ('/api/v1/replay/load',expected_config) in api_calls
+        assert commands[0][1]['env']['REPLAY_DATA_DIR'] == str(data)
+        assert 'compose.replay.yaml' in commands[0][0]
         assert (('/api/v1/replay/control',{'action':'resume'}) in api_calls) == (ui_mode == 'dispatcher')
         assert not any(path == '/api/v1/mode' for path,_ in api_calls)
     else:
         assert ('/api/v1/mode',{'mode':'live'}) in api_calls
         assert not any(path.startswith('/api/v1/replay/') for path,_ in api_calls)
+        assert 'compose.replay.yaml' not in commands[0][0]
     report=json.loads((start_solution.ROOT/'artifacts/start-solution/report.json').read_text())
     assert report['passed'] and report['ui_mode'] == ui_mode
     assert report['mode'] == state['mode']
     assert report['vehicles'] == 3*int(with_archive)
     if with_archive:
         assert report['replay_readiness']['ready']
+        assert report['data_dir'] == str(data)
 
 
 def replay_state(vehicles, *, cycle=2, ml='ok'):
@@ -150,25 +162,78 @@ def test_train_preflight_accepts_two_train_files_without_validate_points_or_labe
     for name in ('traffic.csv', 'schedule.csv'):
         (data/'train'/name).write_text('fixture header\n')
     monkeypatch.setattr(sys, 'argv', ['start_solution.py', '--model-dir', str(bundle),
-        '--data-dir', str(data), '--dataset-split', 'train', '--check-only'])
+        '--data-dir', str(data), '--check-only'])
     start_solution.main()
     result = json.loads(capsys.readouterr().out)
     assert result['status'] == 'inputs_valid' and result['dataset_split'] == 'train'
     # Отсутствующие validate входы не заменяются данными train неявно.
     monkeypatch.setattr(sys, 'argv', ['start_solution.py', '--model-dir', str(bundle),
-        '--data-dir', str(data), '--check-only'])
+        '--data-dir', str(data), '--dataset-split', 'validate', '--check-only'])
     with pytest.raises(SystemExit) as error:
         start_solution.main()
     assert error.value.code == 2
 
 
-def test_train_start_requires_data_directory(tmp_path, monkeypatch):
+@pytest.mark.parametrize('split', ['train', 'validate'])
+def test_missing_bundled_csv_is_reported_without_runtime_start(tmp_path, monkeypatch, capsys, split):
     bundle, _, _ = setup_bundle(tmp_path, monkeypatch)
+    monkeypatch.setattr(start_solution.subprocess, 'run', lambda *_args, **_kwargs: pytest.fail('runtime called'))
     monkeypatch.setattr(sys, 'argv', ['start_solution.py', '--model-dir', str(bundle),
-                                    '--dataset-split', 'train', '--check-only'])
+                                    '--dataset-split', split, '--check-only'])
     with pytest.raises(SystemExit) as error:
         start_solution.main()
     assert error.value.code == 2
+    assert str(start_solution.ROOT/'dataset'/split) in capsys.readouterr().err
+
+
+def write_dataset(data, split):
+    (data/split).mkdir(parents=True)
+    names = ('traffic.csv', 'schedule.csv') if split == 'train' else ('traffic.csv', 'schedule_plan.csv', 'points.csv')
+    for name in names:
+        (data/split/name).write_text('fixture header\n')
+
+
+@pytest.mark.parametrize('split', ['train', 'validate'])
+def test_preflight_uses_bundled_dataset_without_path_argument(tmp_path, monkeypatch, capsys, split):
+    bundle, _, _ = setup_bundle(tmp_path, monkeypatch)
+    write_dataset(start_solution.ROOT/'dataset', split)
+    argv = ['start_solution.py', '--model-dir', str(bundle), '--check-only']
+    if split == 'validate':
+        argv += ['--dataset-split', 'validate']
+    monkeypatch.setattr(sys, 'argv', argv)
+    start_solution.main()
+    result = json.loads(capsys.readouterr().out)
+    assert result['source_mode'] == 'replay' and result['dataset_split'] == split
+    assert result['data_dir'] == str(start_solution.ROOT/'dataset')
+
+
+def test_live_and_external_dataset_are_mutually_exclusive(monkeypatch):
+    monkeypatch.setattr(start_solution, 'inspect_bundle', lambda _: pytest.fail('model read before argument validation'))
+    monkeypatch.setattr(sys, 'argv', ['start_solution.py', '--live', '--data-dir', '/unused'])
+    with pytest.raises(SystemExit) as error:
+        start_solution.main()
+    assert error.value.code == 2
+
+
+def test_official_emulator_requires_explicit_external_dataset_with_tar(tmp_path, monkeypatch, capsys):
+    bundle, _, _ = setup_bundle(tmp_path, monkeypatch)
+    write_dataset(start_solution.ROOT/'dataset', 'train')
+    argv = ['start_solution.py', '--model-dir', str(bundle), '--official-emulator', '--check-only']
+    monkeypatch.setattr(sys, 'argv', argv)
+    with pytest.raises(SystemExit) as error:
+        start_solution.main()
+    assert error.value.code == 2
+    assert '--data-dir' in capsys.readouterr().err
+    data = tmp_path/'external'
+    write_dataset(data, 'train')
+    monkeypatch.setattr(sys, 'argv', argv + ['--data-dir', str(data)])
+    with pytest.raises(SystemExit) as error:
+        start_solution.main()
+    assert error.value.code == 2
+    assert 'ndtp-telemetry-emulator.tar' in capsys.readouterr().err
+    (data/'ndtp-telemetry-emulator.tar').write_bytes(b'fixture archive')
+    start_solution.main()
+    assert json.loads(capsys.readouterr().out)['data_dir'] == str(data)
 
 
 def setup_bundle(tmp_path,monkeypatch,*,with_scope=True):

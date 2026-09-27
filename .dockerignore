@@ -4,6 +4,7 @@ __pycache__
 .git
 .env*
 data
+dataset
 models
 artifacts
 *.csv

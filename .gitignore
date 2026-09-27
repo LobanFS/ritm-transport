@@ -17,3 +17,10 @@ models/
 *.pth
 *.cbm
 .DS_Store
+
+# CSV для запуска истории уже входят в поставку.
+!dataset/train/traffic.csv
+!dataset/train/schedule.csv
+!dataset/validate/traffic.csv
+!dataset/validate/schedule_plan.csv
+!dataset/validate/points.csv

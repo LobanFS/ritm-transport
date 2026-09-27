@@ -4,11 +4,11 @@
 
 ## 1. Запустить исторический поток
 
-Скачайте и распакуйте датасет организаторов. В `/path/to/dataset` должна находиться папка `train/`, а не ещё один вложенный `dataset/`. Для отдельного просмотра validate понадобится и папка `validate/`.
+Пять нужных CSV уже включены в `dataset/`. После клонирования репозитория достаточно скачать модель и запустить систему:
 
 ```bash
 python3 tools/download_model.py
-python3 tools/start_solution.py --data-dir /path/to/dataset --dataset-split train
+python3 tools/start_solution.py
 ```
 
 Для Colima добавьте ко всем командам `tools/start_solution.py` `--context colima-mos-transport`. На Docker Desktop этот флаг не нужен. По завершении помощник проверяет веса, API, источник данных и первый цикл обработки; отчёт сохраняется в `artifacts/start-solution/report.json`.
@@ -20,10 +20,10 @@ python3 tools/start_solution.py --data-dir /path/to/dataset --dataset-split trai
 Для просмотра `validate` с выданным организаторами текущим отклонением:
 
 ```bash
-python3 tools/start_solution.py --data-dir /path/to/dataset --dataset-split validate --no-build
+python3 tools/start_solution.py --dataset-split validate --no-build
 ```
 
-Здесь нужны `validate/traffic.csv`, `schedule_plan.csv` и `points.csv`. Время CSV без часового пояса трактуется как UTC; на экране показано МСК. Это допущение можно изменить в настройках архива.
+Этот режим использует включённые `dataset/validate/traffic.csv`, `schedule_plan.csv` и `points.csv`. Время CSV без часового пояса трактуется как UTC; на экране показано МСК. Это допущение можно изменить в настройках архива. Для собственного каталога раздачи добавьте `--data-dir /path/to/dataset`.
 
 ## 2. Посмотреть результат
 
@@ -37,7 +37,7 @@ python3 tools/start_solution.py --data-dir /path/to/dataset --dataset-split vali
 
 ## 3. Подать NDTP из официального эмулятора
 
-Нужен `ndtp-telemetry-emulator.tar` из раздачи в корне папки датасета. Образ эмулятора рассчитан на `linux/amd64`; на Apple Silicon Docker должен поддерживать его запуск.
+Только для этого сценария нужна отдельная полная раздача организаторов: папка `/path/to/dataset` с `train/` и файлом `ndtp-telemetry-emulator.tar`. Образ эмулятора в репозиторий не включён. Он рассчитан на `linux/amd64`; на Apple Silicon Docker должен поддерживать его запуск.
 
 ```bash
 python3 tools/start_solution.py --data-dir /path/to/dataset --official-emulator
@@ -48,7 +48,7 @@ python3 tools/configure_emulator.py --target-host backend
 
 Начальное отклонение `+180 с` в этом примере задано для проверки интеграции, оно не приходит из NDTP. Подсказка действует пять минут; повторная команда начинает пример заново. Случайное движение эмулятора не проверяет качество GPS-детектора или модели. Настройка настоящего плана описана в [контракте входных данных](OPERATIONS.md#входные-данные).
 
-Вернуться к архиву можно первой командой из раздела 1 с `--no-build`. Чтобы запустить пустой live без архива: `python3 tools/start_solution.py --no-build`.
+Вернуться к архиву: `python3 tools/start_solution.py --no-build`. Чтобы запустить пустой live без архива: `python3 tools/start_solution.py --live --no-build`.
 
 ## 4. Открыть API, документацию и метрики
 
@@ -68,7 +68,7 @@ PyDoc и схемы API также лежат в [`docs/generated/`](generated/)
 
 ## Если что-то не запустилось
 
-- Помощник сообщает об отсутствии файла — проверьте путь к распакованному датасету и выполните `python3 tools/download_model.py` для весов.
+- Помощник сообщает об отсутствии файла — проверьте, что клонирован весь репозиторий с `dataset/`, и выполните `python3 tools/download_model.py` для весов. При явном `--data-dir` проверьте указанный путь.
 - Docker сообщает `bind source path does not exist`, хотя папка существует — разрешите доступ к каталогу модели и датасета в настройках Docker Desktop или `mounts` профиля Colima, затем перезапустите Docker/Colima.
 - Порт занят — остановите предыдущую копию системы. Две копии с одинаковыми портами одновременно не работают.
 - Карта есть, но прогноза нет — проверьте статус автобуса и нажмите **Продолжить**. При пропуске GPS, неизвестном отклонении или отсутствии цели прогноз намеренно недоступен.

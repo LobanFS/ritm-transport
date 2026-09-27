@@ -16,6 +16,8 @@ ROOT_FILES = ('README.md','.gitignore','.gitattributes','.dockerignore','Dockerf
               'pytest.ini','requirements.txt','requirements-dev.txt','compose.yaml','compose.model.yaml',
               'compose.replay.yaml','compose.emulator.yaml','compose.learning.yaml','compose.retrain.yaml','compose.scale.yaml','docs/.nojekyll')
 REPORTS = ('artifacts/release-check/summary.json','artifacts/release-check/performance.json')
+DATASET_FILES = ('dataset/manifest.json', 'dataset/train/traffic.csv', 'dataset/train/schedule.csv',
+                 'dataset/validate/traffic.csv', 'dataset/validate/schedule_plan.csv', 'dataset/validate/points.csv')
 
 
 def existing_reports(root: Path = ROOT) -> tuple[str, ...]:
@@ -82,7 +84,7 @@ def main():
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
     (out/'verification.json').write_text(json.dumps({'passed':False,'stage':'building'})+'\n')
-    files = [ROOT/name for name in ROOT_FILES]
+    files = [ROOT/name for name in ROOT_FILES + DATASET_FILES]
     for directory in SOURCE_DIRS:
         files += [p for p in (ROOT/directory).rglob('*') if p.is_file()
                   and '__pycache__' not in p.parts and not p.name.startswith('.')
@@ -98,7 +100,7 @@ def main():
     manifest = dict(created_at=datetime.now(timezone.utc).isoformat(),
                     files={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest()
                            for p in sorted(set(files))},
-                    excluded=['dataset','submission','.git','.venv','.env','GPS logs'])
+                    excluded=['unbundled dataset files','emulator image','submission','.git','.venv','.env','GPS logs'])
     archive = out/'ritm-solution.zip'
     with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED) as bundle:
         for p in sorted(set(files)):

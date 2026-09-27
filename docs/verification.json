@@ -1,7 +1,7 @@
 {
-  "checked_at": "2026-09-27T15:49:29.567803+00:00",
+  "checked_at": "2026-09-27T16:01:55.457739+00:00",
   "python_tests": {
-    "passed": 653,
+    "passed": 665,
     "failed": 0
   },
   "dashboard_checks": {
@@ -103,5 +103,12 @@
     ],
     "tool": "tools/check_docker_load.py",
     "tool_sha256": "ab04f454fe07a716d01360c1676d8fa15c1648e6b5f949abe4ffe175ee208954"
+  },
+  "bundled_dataset": {
+    "directory": "dataset/",
+    "files": 5,
+    "default_split": "train",
+    "checksums": "dataset/manifest.json",
+    "default_start_without_data_dir": true
   }
 }
