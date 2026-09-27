@@ -43,6 +43,7 @@ python3 tools/start_solution.py --dataset-split validate
 ## Проверка и документация
 
 - [Инструкция для жюри](docs/JURY.md): подача CSV и NDTP, прогнозы, предупреждения и метрики.
+- [ML-исследование и итоговая модель](docs/ML.md): архитектуры, статьи, внешние датасеты, признаки и метрики.
 - [Документация кода и API](https://lobanfs.github.io/ritm-transport/): PyDoc и OpenAPI.
 - После запуска: [Swagger Backend](http://127.0.0.1:8000/docs), [Swagger ML](http://127.0.0.1:8001/docs), [PyDoc](http://127.0.0.1:8080/documentation/).
 - [Эксплуатация и дообучение](docs/OPERATIONS.md).
