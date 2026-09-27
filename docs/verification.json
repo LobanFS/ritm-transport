@@ -6,7 +6,7 @@
     "note": "Full suite with local TCP sockets enabled; 10.52 s. Includes 129 concurrent NDTP clients, 257-vehicle ML batching and atomic archive timeout."
   },
   "dashboard_checks": {
-    "passed": 79,
+    "passed": 85,
     "browser": {
       "map_controls_on_left": false,
       "neutral_route_and_stops": false,
@@ -39,11 +39,16 @@
       "same_line_highlight": true,
       "selected_line_preserved_under_search": true,
       "switch_selected_line_updates_highlights": true,
-      "collapse_no_empty_column": true
+      "collapse_no_empty_column": true,
+      "strict_red_amber_filters": true,
+      "no_pattern_cause_panel_hidden": true,
+      "insufficient_history_cause_panel_hidden": true,
+      "observed_cause_preserved_without_unknown_status": true
     },
     "geometry_checks": 13,
     "transfer_checks": 13,
-    "fleet_checks": 9
+    "fleet_checks": 15,
+    "checked_at": "2026-09-27T18:24:00.746690+00:00"
   },
   "docker_start": {
     "train": true,
@@ -161,7 +166,7 @@
     "expires_on_backend_restart": true
   },
   "road_geometry": {
-    "source": "irina, a8069898a663b7f98a052a8989bb3a69b1c773b0",
+    "source": "OSRM; исходный снимок команды a8069898a663b7f98a052a8989bb3a69b1c773b0",
     "cached_segments": 835,
     "train_directed_pairs": {
       "matched": 2496,

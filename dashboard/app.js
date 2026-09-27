@@ -192,6 +192,7 @@
       .some(routeId => idOf(routeId) === idOf(vehicle.route_id));
 
   function vehiclesOnMap(filtered) {
+    if ($("risk-red").checked || $("risk-amber").checked) return filtered;
     const selected = chosenVehicle();
     const ids = new Set(filtered.map(v => idOf(v.tr_id)));
     return [...filtered, ...list(snapshot?.vehicles).filter(v => !ids.has(idOf(v.tr_id)) && sameSelectedLine(v, selected, snapshot))];
@@ -548,14 +549,17 @@
     text("detail-freshness", finite(vehicle.age_s) ? `${duration(vehicle.age_s)} назад` : "—");
     const explanation = vehicle.explanation;
     const modelExplanation = prediction?.forecast_explanation;
-    $("detail-cause-panel").hidden = onPlan;
-    text("detail-cause", onPlan ? "" : explanation?.summary || "Причина задержки не установлена");
+    const hasObservation = !onPlan && !!explanation?.summary
+      && (explanation.observation_status === "observed" || explanation.cause_status === "hypothesis");
+    $("detail-cause-panel").hidden = !hasObservation;
+    text("detail-cause", hasObservation ? explanation.summary : "");
     $("detail-cause").title = explanation?.cause_status === "hypothesis" ? explanation.possible_cause : "";
-    text("detail-cause-status", onPlan ? "" : explanation?.cause_status === "hypothesis" ? "Гипотеза по телеметрии, требует проверки" : explanation?.observation_status === "observed" ? "Наблюдение · физическая причина не установлена" : "");
-    const observations = onPlan ? [] : list(explanation?.observations)
+    text("detail-cause-status", hasObservation && explanation.cause_status === "hypothesis" ? "Гипотеза по телеметрии, требует проверки" : "");
+    $("detail-cause-status").hidden = !$("detail-cause-status").textContent;
+    const observations = !hasObservation ? [] : list(explanation?.observations)
       .filter(item => item.kind !== "data_quality" && item.code !== "current_deviation" && item.title !== explanation?.summary && item.evidence)
       .slice(0, 1).map(item => item.title);
-    const modelFactors = onPlan ? [] : list(modelExplanation?.factors)
+    const modelFactors = !hasObservation ? [] : list(modelExplanation?.factors)
       .filter(item => item && finite(item.effect_s))
       .sort((left, right) => Math.abs(right.effect_s) - Math.abs(left.effect_s))
       .slice(0, 1)
@@ -571,7 +575,8 @@
       $("detail-observations").dataset.content = reasonsKey;
     }
     $("detail-observations").hidden = reasons.length === 0;
-    text("detail-recommendation", onPlan ? "Продолжить наблюдение за движением." : vehicle.recommendation || "Проверьте ситуацию на маршруте.");
+    text("detail-recommendation", hasObservation ? vehicle.recommendation || "" : "");
+    $("detail-recommendation").closest(".recommendation").hidden = !$("detail-recommendation").textContent;
 
   }
 
@@ -739,10 +744,12 @@
       probability.hidden = probabilityLabel(incident.probability_late, incident.probability_status) === "—";
       if (incident.probability_note) probability.title = incident.probability_note;
       const explanation = incident.explanation;
-      const cause = node("p", "incident-cause", explanation?.cause_status === "hypothesis" ? `Предполагаемая причина: ${explanation.possible_cause}` : explanation?.summary ? `Наблюдение: ${explanation.summary}` : "Причина не установлена");
-      const description = node("p", "", incident.reason || "Основание сигнала не передано");
-      item.append(heading, state, target, tags, probability, cause);
-      if (fullUI) item.append(section, description);
+      const cause = explanation?.cause_status === "hypothesis" && explanation.possible_cause
+        ? `Предполагаемая причина: ${explanation.possible_cause}`
+        : explanation?.observation_status === "observed" && explanation.summary ? `Наблюдение: ${explanation.summary}` : "";
+      item.append(heading, state, target, tags, probability);
+      if (cause) item.append(node("p", "incident-cause", cause));
+      if (fullUI) item.append(section);
       return item;
     }));
   }

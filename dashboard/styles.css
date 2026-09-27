@@ -1,6 +1,6 @@
 @charset "UTF-8";
 
-/* Visual system adapted from irina/dashboard; live data and controls use filipp's contracts. */
+/* Общий стиль дашборда и элементов карты. */
 :root {
   --navy: #173d43;
   --navy-soft: #28565d;

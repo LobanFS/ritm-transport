@@ -1,4 +1,4 @@
-"""Упаковать дорожные сегменты Ирины для карты; GPS и ML не используются."""
+"""Упаковать дорожные сегменты OSRM для карты; GPS и ML не используются."""
 from __future__ import annotations
 
 import argparse
@@ -60,7 +60,7 @@ def prepare(raw: bytes) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("source", type=Path, help="Исходный route-network.json из коммита Ирины")
+    parser.add_argument("source", type=Path, help="Исходный route-network.json с дорожными сегментами OSRM")
     parser.add_argument("--output", type=Path,
                         default=Path(__file__).resolve().parents[1]/"dashboard/assets/road-network.json")
     args = parser.parse_args()
